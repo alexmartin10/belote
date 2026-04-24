@@ -1,6 +1,6 @@
 """le jeu de cartes"""
 
-from card import Card, Suit, Rank
+from .card import Card, Suit, Rank
 import random
 
 class Deck:
@@ -49,6 +49,7 @@ class Deck:
         """
         si on utilise cette fonction c'est que quelqu'un a pris
         """
+        hands[taker_index].append(self.cards[self.next_card_index])
         self.next_card_index += 1
         n_cards_to_distribute = 3
         for i in range(self.num_players):
@@ -66,3 +67,11 @@ class Deck:
                     self.next_card_index += 1
         
         return hands
+
+    def _full_distribution(self):
+        hands = [[] for _ in range(4)]
+        self.shuffle()
+        index = 0
+        for hand in hands:
+            for _ in range(8):
+                hand.append(self.cards[index])

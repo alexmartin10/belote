@@ -109,3 +109,6 @@ class Card:
 
     def repr(self):
         return f"{self.rank.value}{self.suit.value}"
+    
+    def __eq__(self, other):
+        return self.suit == other.suit and self.rank == other.rank

@@ -1,17 +1,22 @@
-from card import Card, Suit, Rank
+from .card import Card, Suit
 import numpy as np
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
-class Player:
+class Player(ABC):
     """
     cette classe représente les joueurs
     """
-    def __init__(self, index):
-        self.index = index
+    def __init__(self, id, username):
+        self.id = id
+        self.username = username
 
-    def make_hand(self, hand: list[Card], trump_suit):
+    def set_player_index(self, index: int | None):
+        """set the player index for the game"""
+        self.index = index
+        return index
+
+    def make_hand(self, hand: list[Card]):
         self.hand = hand
-        self.trump_suit = trump_suit
 
     def show_hand(self):
         print(self.hand)
@@ -19,7 +24,7 @@ class Player:
     def cards_of_this_suit_in_hand(self, suit:Suit):
         return [card for card in self.hand if card.suit == suit]
 
-    def playable_cards(self, cards_played:list[Card]):
+    def playable_cards(self, cards_played:list[Card], trump_suit):
         #1ER CAS SIMPLE : 1ER joueur
         if len(cards_played) == 0:
             return self.hand
@@ -29,8 +34,8 @@ class Player:
             suit_to_follow = first_card_played.suit
 
             #CAS PARTICULIER ATOUT
-            if suit_to_follow == self.trump_suit:
-                return self.playable_cards_trump_suit(cards_played, self.trump_suit)
+            if suit_to_follow == trump_suit:
+                return self.playable_cards_trump_suit(cards_played, trump_suit)
             
             cards_of_suit_to_follow_in_hand = self.cards_of_this_suit_in_hand(suit_to_follow)
             #SI ON A DES CARTES DE LA COULEUR DEMANDEE ON EST OBLIGES DE METTRE CA
@@ -39,9 +44,9 @@ class Player:
             
             #SINON ON PEUT COUPER OU METTRE NIMPORTE QUELLE CARTE
             else:
-                trump_cards_in_hand = self.cards_of_this_suit_in_hand(self.trump_suit)
+                trump_cards_in_hand = self.cards_of_this_suit_in_hand(trump_suit)
                 if len(trump_cards_in_hand) > 0:
-                    return self.playable_cards_trump_suit(cards_played, self.trump_suit)
+                    return self.playable_cards_trump_suit(cards_played, trump_suit)
                 
                 else:
                     return self.hand
@@ -63,6 +68,8 @@ class Player:
             cards_played_strenght = [
                 card.strength(trump_suit) for card in cards_played_trump_suit
             ]
+            cards_played_strenght.append(-1) #in case there is no trump card played until now, so
+                                             #we can call max at the next line
             higher_cards_in_hand = [
                 card for card in trump_cards_in_hand if card.strength(trump_suit) > max(cards_played_strenght)
             ]
@@ -81,15 +88,15 @@ class Player:
 
 
 class BotPlayer(Player):
-    def __init__(self, index:int):
-        super().__init__(index)
+    def __init__(self, id, username):
+        super().__init__(id, username)
 
     def decide_bid(self, trump_card: Card) -> bool:
         points_in_hand = [card.points(trump_card.suit) for card in self.hand]
         return sum(points_in_hand) > 50
 
-    def play(self, player_index_leading, trump_suit):
-        cards_available_to_play = self.playable_cards()
+    def play(self, player_index_leading, trump_suit, cards_played):
+        cards_available_to_play = self.playable_cards(cards_played)
         cards_available_strenght = [
             card.strength(trump_suit) for card in cards_available_to_play
         ]

@@ -1,6 +1,5 @@
-from card import Card, Suit, Rank
-from deck import Deck
-from player import Player
+from .card import Suit
+from .player import Player
 
 import numpy as np
 
@@ -21,7 +20,7 @@ class Fold:
             raise ValueError("Not this player's turn")
         
         player = self.players[player_index]
-        if card not in player.playable_cards(self.cards_played):
+        if card not in player.playable_cards(self.cards_played, self.trump_suit):
             raise ValueError("Can't play this card")
         else:
             self.cards_played.append(card)
