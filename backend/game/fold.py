@@ -21,9 +21,11 @@ class Fold:
         
         player = self.players[player_index]
         if card not in player.playable_cards(self.cards_played, self.trump_suit):
-            raise ValueError("Can't play this card")
+            raise ValueError(f"Can't play this card, player{player_index} played {card}, but possible" \
+                             f"cards were {player.playable_cards(self.cards_played, self.trump_suit)}")
         else:
             self.cards_played.append(card)
+            player.remove_card_played(card)
             self._advance_next_player()
         
         return self.get_state()

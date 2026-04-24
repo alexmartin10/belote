@@ -67,11 +67,3 @@ class Deck:
                     self.next_card_index += 1
         
         return hands
-
-    def _full_distribution(self):
-        hands = [[] for _ in range(4)]
-        self.shuffle()
-        index = 0
-        for hand in hands:
-            for _ in range(8):
-                hand.append(self.cards[index])

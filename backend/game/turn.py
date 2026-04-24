@@ -31,7 +31,7 @@ class Turn:
         self.bid = Bid(self.order, self.trump_card)
         for index, hand in zip(self.order, hands_before_bid):
             player = self.players[index]
-            player.make_hand(hand, self.trump_card.suit)
+            player.make_hand(hand)
         while not self.bid.is_bidding_over():
             current_player = self.players[self.bid.current_bidder]
             self.bid_state = self.bid.receive_bid(

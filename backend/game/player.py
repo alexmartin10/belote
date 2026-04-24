@@ -26,7 +26,7 @@ class Player(ABC):
 
     def playable_cards(self, cards_played:list[Card], trump_suit):
         #1ER CAS SIMPLE : 1ER joueur
-        if len(cards_played) == 0:
+        if cards_played == []:
             return self.hand
         
         else:
@@ -35,7 +35,7 @@ class Player(ABC):
 
             #CAS PARTICULIER ATOUT
             if suit_to_follow == trump_suit:
-                return self.playable_cards_trump_suit(cards_played, trump_suit)
+                return self._playable_cards_trump_suit(cards_played, trump_suit)
             
             cards_of_suit_to_follow_in_hand = self.cards_of_this_suit_in_hand(suit_to_follow)
             #SI ON A DES CARTES DE LA COULEUR DEMANDEE ON EST OBLIGES DE METTRE CA
@@ -46,12 +46,12 @@ class Player(ABC):
             else:
                 trump_cards_in_hand = self.cards_of_this_suit_in_hand(trump_suit)
                 if len(trump_cards_in_hand) > 0:
-                    return self.playable_cards_trump_suit(cards_played, trump_suit)
+                    return self._playable_cards_trump_suit(cards_played, trump_suit)
                 
                 else:
                     return self.hand
     
-    def playable_cards_trump_suit(self, cards_played:list[Card], trump_suit):
+    def _playable_cards_trump_suit(self, cards_played:list[Card], trump_suit):
         """dans le cas ou un atout est joué, ou si l'on doit couper
         vérifier juste que l'on doive monter"""
 
@@ -78,6 +78,9 @@ class Player(ABC):
             else:
                 return trump_cards_in_hand
     
+    def remove_card_played(self, card):
+        self.hand.remove(card)
+    
     @abstractmethod
     def decide_bid(self):
         pass
@@ -96,7 +99,7 @@ class BotPlayer(Player):
         return sum(points_in_hand) > 50
 
     def play(self, player_index_leading, trump_suit, cards_played):
-        cards_available_to_play = self.playable_cards(cards_played)
+        cards_available_to_play = self.playable_cards(cards_played, trump_suit)
         cards_available_strenght = [
             card.strength(trump_suit) for card in cards_available_to_play
         ]
@@ -104,13 +107,21 @@ class BotPlayer(Player):
         if self.is_player_leading_in_my_team(player_index_leading) == True:
             arg = np.argmax(cards_available_strenght)
             card_played = cards_available_to_play[arg]
-            self.hand.remove(card_played)
             return card_played
         else:
             arg = np.argmin(cards_available_strenght)
             card_played = cards_available_to_play[arg]
-            self.hand.remove(card_played)
             return card_played
 
     def is_player_leading_in_my_team(self, player_index_leading:int):
         return (player_index_leading % 2) == (self.index % 2)
+    
+
+class AlwaysTakingBot(Player):
+    def decide_bid(self, trump_card):
+        return True
+    
+    def play(self, player_index_leading, trump_suit, cards_played):
+        cards_available_to_play = self.playable_cards(cards_played, trump_suit)
+        card = cards_available_to_play[0]
+        return card
