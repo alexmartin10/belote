@@ -4,7 +4,7 @@ Manages a full game consisting of multiple turns. A game ends when one
 team reaches 501 points or more.
 """
 
-from .player import Player, BotPlayer
+from .player import Player, BotPlayer, HumanPlayer
 import random
 from .turn import Turn
 from .deck import Deck
@@ -38,6 +38,10 @@ class Game:
         self.team_ns_points = 0
         self.team_ew_points = 0
         self.starting_player_index = random.choice([0, 1, 2, 3])
+        self.game_over = False
+
+    def start_game(self):
+        self._new_turn()
 
     def add_point_one_turn(self, dict_points: dict):
         """Adds points from a completed turn to the team totals.
@@ -48,14 +52,14 @@ class Game:
         self.team_ns_points += dict_points[0] + dict_points[2]
         self.team_ew_points += dict_points[1] + dict_points[3]
 
-    def new_turn(self) -> dict:
+    def _new_turn(self) -> dict:
         """Creates and runs a new Turn, returning the resulting points.
 
         Returns:
             A dictionary mapping player indices to their points for this turn.
         """
-        turn = Turn(self.players, self.starting_player_index, Deck())
-        return turn.main()
+        self.turn = Turn(self.players, self.starting_player_index, Deck())
+        self.turn.deal()
 
     def reset_player_index(self):
         """Resets all player indices to None at the end of the game.
@@ -65,24 +69,65 @@ class Game:
         for player in self.players.values():
             player.set_player_index(None)
 
-    def run(self):
-        """Runs the game until one team reaches 501 points.
+    def play_card(self, card):
+        while self.turn.turn_aborted:
+            self._new_turn()
+        if not self.turn.is_turn_over():
+            turn_status = self.turn.get_status()
+            current_player = self.players[turn_status['current_player']]
+            while not isinstance(current_player, HumanPlayer):
+                self._play_bots(current_player, turn_status)
+                if self.turn.is_turn_over():
+                    break
+                turn_status = self.turn.get_status()
+                current_player = self.players[turn_status['current_player']]
 
-        The starting player rotates by one after each turn. Player indices
-        are reset when the game ends.
-        """
-        while self.team_ew_points < 501 and self.team_ns_points < 501:
-            turn_points = self.new_turn()
-            self.add_point_one_turn(turn_points)
+            self.turn.play_one_card(current_player.index, card)
+            if not self.turn.is_turn_over():
+                turn_status = self.turn.get_status()
+                current_player = self.players[turn_status['current_player']]
+
+            while not (isinstance(current_player, HumanPlayer) or self.turn.is_turn_over()):
+                self._play_bots(current_player, turn_status)
+                if self.turn.is_turn_over():
+                    break
+                turn_status = self.turn.get_status()
+                current_player = self.players[turn_status['current_player']]
+            if self.turn.is_turn_over():
+                self._advance_next_turn()
+        
+    def _play_bots(self, player, status):
+        return self.turn.play_one_card(
+                player.index,
+                card=player.play(
+                    status['leading_player'],
+                    status['trump_suit'],
+                    status['cards_played']
+                )
+            )
+    
+    def _advance_next_turn(self):
+        turn_points = self.turn.get_status()['points']
+        self.add_point_one_turn(turn_points)
+        if self.is_game_over():
+            self.game_over = True
+            self.reset_player_index()
+        else:
             self.starting_player_index = (self.starting_player_index + 1) % 4
-        self.reset_player_index()
+            self._new_turn()
 
+    def is_game_over(self):
+        return self.team_ew_points > 500 or self.team_ns_points > 500
+    
+    def get_player_hand(self, player: Player):
+        return player.hand
 
-if __name__ == "__main__":
-    game = Game([
-        BotPlayer(0, 'bot0'),
-        BotPlayer(1, 'bot1'),
-        BotPlayer(2, 'bot2'),
-        BotPlayer(3, 'bot3')
-    ])
-    game.run()
+    def get_status(self):
+        turn_status = self.turn.get_status()
+        return {
+            'game_over': self.game_over,
+            'team_ns_points': self.team_ns_points,
+            'team_ew_points': self.team_ew_points,
+            'cards_played': turn_status['cards_played'],
+            'current_player': turn_status['current_player']
+        }

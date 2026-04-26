@@ -24,14 +24,13 @@ class Player(ABC):
         hand: The player's current cards.
     """
 
-    def __init__(self, id: int, username: str):
+    def __init__(self, username: str):
         """Initializes a Player with a permanent id and username.
 
         Args:
             id: Permanent identifier for the player.
             username: Display name of the player.
         """
-        self.id = id
         self.username = username
 
     def set_player_index(self, index: int | None):
@@ -152,7 +151,7 @@ class Player(ABC):
         self.hand.remove(card)
 
     @abstractmethod
-    def decide_bid(self, trump_card: Card) -> bool:
+    def decide_bid(self, *args, **kargs) -> bool:
         """Decides whether the player takes the contract.
 
         Args:
@@ -164,7 +163,7 @@ class Player(ABC):
         pass
 
     @abstractmethod
-    def play(self, player_index_leading: int, trump_suit: Suit, cards_played: list[Card]) -> Card:
+    def play(self, *args, **kargs) -> Card:
         """Selects a card to play in the current trick.
 
         Args:
@@ -191,14 +190,14 @@ class BotPlayer(Player):
         Inherits all attributes from Player.
     """
 
-    def __init__(self, id: int, username: str):
+    def __init__(self, username: str):
         """Initializes a BotPlayer.
 
         Args:
             id: Permanent identifier for the player.
             username: Display name of the player.
         """
-        super().__init__(id, username)
+        super().__init__(username)
 
     def decide_bid(self, trump_card: Card) -> bool:
         """Takes the contract if the hand is worth more than 50 points.
@@ -229,9 +228,9 @@ class BotPlayer(Player):
         ]
 
         if self.is_player_leading_in_my_team(player_index_leading):
-            arg = np.argmax(cards_available_strength)
+            arg = int(np.argmax(cards_available_strength))
         else:
-            arg = np.argmin(cards_available_strength)
+            arg = int(np.argmin(cards_available_strength))
 
         return cards_available_to_play[arg]
 
@@ -248,6 +247,17 @@ class BotPlayer(Player):
         """
         return (player_index_leading % 2) == (self.index % 2)
 
+
+class HumanPlayer(Player):
+    def __init__(self, id, username):
+        super().__init__(username)
+        self.id = id
+    
+    def decide_bid(self, trump_card):
+        return False
+    
+    def play(self):
+        raise NotImplementedError
 
 class AlwaysTakingBot(Player):
     """A bot that always takes the contract and plays the first legal card.

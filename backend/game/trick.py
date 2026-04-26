@@ -1,4 +1,4 @@
-"""Belote trick (fold) logic.
+"""Belote trick logic.
 
 Manages a single trick: card validation, trick winner determination,
 and point counting.
@@ -10,7 +10,7 @@ from .player import Player
 import numpy as np
 
 
-class Fold:
+class Trick:
     """Manages a single trick in a Belote turn.
 
     Validates each card played, tracks the current leader, and computes
@@ -27,7 +27,7 @@ class Fold:
     """
 
     def __init__(self, players: dict[int, Player], starting_player_index: int, trump_suit: Suit):
-        """Initializes a Fold.
+        """Initializes a Trick.
 
         Args:
             players: Dictionary mapping player indices to Player objects.
@@ -89,7 +89,7 @@ class Fold:
             self.current_player = None
             self._count_points()
 
-    def is_fold_over(self) -> bool:
+    def is_trick_over(self) -> bool:
         """Checks whether all four players have played.
 
         Returns:
@@ -121,7 +121,7 @@ class Fold:
         always outrank non-trump cards due to the +100 strength bonus.
         """
         strengths = [card.strength(self.trump_suit) for card in self.cards_played]
-        arg = np.argmax(strengths)
+        arg = int(np.argmax(strengths))
         self.leading_player = (self.starting_player + arg) % 4
 
     def _count_points(self):

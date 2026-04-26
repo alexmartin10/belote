@@ -1,17 +1,17 @@
 """Belote turn logic.
 
 A turn (manche) consists of one bidding phase followed by 8 tricks.
-Turn orchestrates Bid, Fold, and Player without knowing anything
+Turn orchestrates Bid, tTrick, and Player without knowing anything
 about the communication layer above it.
 
 Glossary:
-    fold: A single trick (pli in French).
+    trick: A single trick (pli in French).
     turn: A full round of 8 tricks (manche in French).
 """
 
 from .deck import Deck
 from .player import BotPlayer
-from .fold import Fold
+from .trick import Trick
 from .bid import Bid
 
 
@@ -19,7 +19,7 @@ class Turn:
     """Orchestrates a full Belote round (bidding + 8 tricks).
 
     Acts as the top-level coordinator of the game engine for a single round.
-    Delegates bidding to Bid and trick logic to Fold. Does not block on user
+    Delegates bidding to Bid and trick logic to Trick. Does not block on user
     input; all decisions are produced by Player subclasses and passed in.
 
     Attributes:
@@ -47,6 +47,7 @@ class Turn:
         self.deck = deck
         self.order = [(starting_player_index + k) % 4 for k in range(4)]
         self.points = {0: 0, 1: 0, 2: 0, 3: 0}
+        self.tricks_played = 0
         self.turn_aborted = None
         self.turn_finished = None
 
@@ -77,6 +78,7 @@ class Turn:
         else:
             hands = [self.players[i].hand for i in range(4)]
             self.deck.deal_after_bid(self.bid.taker, hands)
+            self.trick = Trick(self.players, self.starting_player_index, self.bid.trump_suit)
 
     def new_turn(self):
         """Placeholder for starting a new turn.
@@ -88,35 +90,24 @@ class Turn:
             NotImplementedError: Always.
         """
         raise NotImplementedError
+    
+    def play_one_card(self, player_index, card):
+        self.trick.receive_card(player_index, card)
 
-    def play_folds(self):
-        """Plays all 8 tricks of the turn.
+        if self.trick.is_trick_over():
+            self._advance_next_trick()
 
-        The winner of each trick leads the next one. Adds 10 bonus points
-        (10 de der) to the last trick winner. Sets turn_finished to True
-        when complete.
-        """
-        starting_player = self.starting_player_index
+    def _advance_next_trick(self):
+        self.tricks_played += 1
+        self.points[self.trick.leading_player] += self.trick.points
+        self.starting_player_index = self.trick.leading_player
 
-        for _ in range(8):
-            fold = Fold(self.players, starting_player, self.bid.trump_suit)
-
-            while not fold.is_fold_over():
-                player = self.players[fold.current_player]
-                fold.receive_card(
-                    player_index=fold.current_player,
-                    card=player.play(
-                        player_index_leading=fold.leading_player,
-                        trump_suit=self.trump_card.suit,
-                        cards_played=fold.cards_played
-                    )
-                )
-
-            self.points[fold.leading_player] += fold.points
-            starting_player = fold.leading_player
-
-        self.points[fold.leading_player] += 10  # 10 de der bonus for last trick
-        self.turn_finished = True
+        if self.tricks_played == 8:
+            self.points[self.trick.leading_player] += 10
+            self.turn_finished = True
+        
+        else:
+            self.trick = Trick(self.players, self.starting_player_index, self.trump_card.suit)
 
     def _check_contract(self) -> bool:
         """Checks whether the contracting team fulfilled their contract.
@@ -153,7 +144,13 @@ class Turn:
             A dictionary with the following key:
                 points: Dictionary mapping player indices to their points.
         """
-        return {'points': self.points}
+        return {
+            'points': self.points,
+            'current_player': self.trick.current_player,
+            'leading_player': self.trick.leading_player,
+            'trump_suit': self.trump_card.suit,
+            'cards_played': self.trick.cards_played
+        }
 
     def is_turn_over(self) -> bool:
         """Checks whether the turn has ended (either finished or aborted).
@@ -172,6 +169,6 @@ class Turn:
         """
         self.deal()
         if not self.turn_aborted:
-            self.play_folds()
+            self.play_tricks()
             self._get_points()
         return self.points
