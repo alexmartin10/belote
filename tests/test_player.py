@@ -19,7 +19,7 @@ def same_elements(a, b):
 @pytest.fixture
 def basic_bot():
     """A BotPlayer (index 0) holding 10♠, J♠, A♥, Q♥."""
-    player = BotPlayer(0, 'bot')
+    player = BotPlayer('bot')
     player.set_player_index(0)
     player.make_hand([
         Card(Rank.TEN, Suit.SPADES),
@@ -33,7 +33,7 @@ def basic_bot():
 @pytest.fixture
 def taker_bot():
     """An AlwaysTakingBot (index 0) holding 10♠, J♠, A♥, Q♥."""
-    player = AlwaysTakingBot(1, 'taker')
+    player = AlwaysTakingBot('taker')
     player.set_player_index(0)
     player.make_hand([
         Card(Rank.TEN, Suit.SPADES),

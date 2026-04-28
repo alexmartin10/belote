@@ -14,7 +14,7 @@ def basic_trick():
         Player 2: 9♥, Q♦, 10♣
         Player 3: 10♥, A♦, 9♣
     """
-    players = {i: BotPlayer(i, f"bot{i}") for i in range(4)}
+    players = {i: BotPlayer(f"bot{i}") for i in range(4)}
     players[0].make_hand([Card(Rank.TEN, Suit.SPADES), Card(Rank.ACE, Suit.CLUBS), Card(Rank.SEVEN, Suit.HEARTS)])
     players[1].make_hand([Card(Rank.JACK, Suit.HEARTS), Card(Rank.KING, Suit.DIAMONDS), Card(Rank.EIGHT, Suit.CLUBS)])
     players[2].make_hand([Card(Rank.NINE, Suit.HEARTS), Card(Rank.QUEEN, Suit.DIAMONDS), Card(Rank.TEN, Suit.CLUBS)])
