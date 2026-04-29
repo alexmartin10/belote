@@ -20,3 +20,7 @@ class GameResponse(BaseModel):
 class CardPlay(BaseModel):
     rank: Rank
     suit: Suit
+
+class CardResponse(BaseModel):
+    rank: Rank
+    suit: Suit

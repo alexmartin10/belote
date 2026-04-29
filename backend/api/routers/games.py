@@ -2,10 +2,10 @@ from fastapi import APIRouter, status, HTTPException
 
 import random
 
-from ..schemas.game import GameCreate, GameResponse, CardPlay
+from ..schemas.game import GameCreate, GameResponse, CardPlay, CardResponse
 from ...game.game import Game
 from ...game.card import Card
-from ...game.player import HumanPlayer, BotPlayer, AlwaysTakingBot
+from ...game.player import HumanPlayer, BotPlayer, AlwaysTakingBot, Player
 
 
 games_db: dict[int, GameResponse] = {}
@@ -57,6 +57,28 @@ def play(game_id: int, card_play: CardPlay):
         raise HTTPException(400, str(e))
     return game.get_status()
 
+@router.post('/{game_id}/bid')
+def bid(game_id: int, takes: bool):
+    game: Game = get_game_or_404(game_id, games_engine)
+    try:
+        game.play_bid(takes)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return game.get_status()
+
+@router.get('/{game_id}/hand', response_model=list[CardResponse])
+def get_player_hand(game_id: int):
+    game = get_game_or_404(game_id, games_engine)
+    human_index = get_human_player_index(game)
+    human_player = game.players[human_index]
+    return human_player.hand
+
+@router.get('{game_id}/showncard', response_model=CardResponse)
+def get_card_shown(game_id: int):
+    game = get_game_or_404(game_id, games_engine)
+    return game.get_status()['card_shown']
+
+
 def get_game_or_404(game_id: int, db: dict[int: Game | GameResponse]) -> Game | GameResponse:
     response = db.get(game_id)
     if response is not None:
@@ -71,3 +93,6 @@ def choose_bot_username():
 def count_human_players_in_game(game):
     """for the future to put in GameResponse"""
     raise NotImplementedError
+
+def get_human_player_index(game: Game) -> int:
+    return [i  for i in game.players.keys() if isinstance(game.players[i], HumanPlayer)][0]

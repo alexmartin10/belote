@@ -48,10 +48,11 @@ class Turn:
         self.order = [(starting_player_index + k) % 4 for k in range(4)]
         self.points = {0: 0, 1: 0, 2: 0, 3: 0}
         self.tricks_played = 0
+        self.trick = None
         self.turn_aborted = None
         self.turn_finished = None
 
-    def deal(self):
+    def deal_before_bid(self):
         """Deals cards and runs the bidding phase.
 
         Deals 5 cards to each player, reveals the trump card, then runs
@@ -65,14 +66,7 @@ class Turn:
         for index, hand in zip(self.order, hands_before_bid):
             self.players[index].make_hand(hand)
 
-        while not self.bid.is_bidding_over():
-            current_player = self.players[self.bid.current_bidder]
-            self.bid.receive_bid(
-                current_player.index,
-                current_player.decide_bid(self.bid.trump_card),
-                suit=None
-            )
-
+    def resolve_second_round_bid(self):
         if self.bid.current_bidder is None:
             self.turn_aborted = True
         else:
@@ -90,6 +84,9 @@ class Turn:
             NotImplementedError: Always.
         """
         raise NotImplementedError
+    
+    def bid_one_player(self, player_index, takes, suit=None):
+        self.bid.receive_bid(player_index, takes, suit=suit)
     
     def play_one_card(self, player_index, card):
         self.trick.receive_card(player_index, card)
@@ -146,11 +143,32 @@ class Turn:
         """
         return {
             'points': self.points,
-            'current_player': self.trick.current_player,
-            'leading_player': self.trick.leading_player,
+            'current_player': self.get_current_player(),
+            'leading_player': self.get_leading_player(),
             'trump_suit': self.trump_card.suit,
-            'cards_played': self.trick.cards_played
+            'cards_played': self.get_cards_played(),
+            'starting_player': self.starting_player_index,
+            'card_shown': self.trump_card,
+            'trump_suit': self.bid.trump_suit
         }
+    
+    def get_current_player(self):
+        if self.trick is None:
+            return self.bid.current_bidder
+        else:
+            return self.trick.current_player
+        
+    def get_leading_player(self):
+        if self.trick is None:
+            return None
+        else:
+            return self.trick.leading_player
+    
+    def get_cards_played(self):
+        if self.trick is None:
+            return []
+        else:
+            return self.trick.cards_played
 
     def is_turn_over(self) -> bool:
         """Checks whether the turn has ended (either finished or aborted).
@@ -159,16 +177,4 @@ class Turn:
             True if the turn is over, False otherwise.
         """
         return bool(self.turn_aborted or self.turn_finished)
-
-    def main(self) -> dict:
-        """Runs a complete turn: deals, bids, plays, and scores.
-
-        Returns:
-            A dictionary mapping player indices to their final point totals.
-            Returns all zeros if the turn was aborted (no taker).
-        """
-        self.deal()
-        if not self.turn_aborted:
-            self.play_tricks()
-            self._get_points()
-        return self.points
+    

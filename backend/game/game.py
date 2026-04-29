@@ -59,15 +59,38 @@ class Game:
             A dictionary mapping player indices to their points for this turn.
         """
         self.turn = Turn(self.players, self.starting_player_index, Deck())
-        self.turn.deal()
+        self.turn.deal_before_bid()
 
-    def reset_player_index(self):
-        """Resets all player indices to None at the end of the game.
+    def play_bid(self, takes):
+        if not self.turn.bid.is_bidding_over():
+            current_player = self.players[self.turn.get_current_player()]
+            while not isinstance(current_player, HumanPlayer):
+                self.turn.bid_one_player(
+                    current_player.index,
+                    current_player.decide_bid(self.turn.bid.trump_card)
+                    )
+                if self.turn.bid.is_bidding_over():
+                    break
+                current_player = self.players[self.turn.get_current_player()]
 
-        Allows Player objects to be reused in a new game without stale state.
-        """
-        for player in self.players.values():
-            player.set_player_index(None)
+            self.turn.bid_one_player(current_player.index, takes)
+
+            if not self.turn.bid.is_bidding_over():
+                current_player = self.players[self.turn.get_current_player()]
+
+            while not isinstance(current_player, HumanPlayer):
+                self.turn.bid_one_player(
+                    current_player.index,
+                    current_player.decide_bid(self.turn.bid.trump_card)
+                    )
+                if self.turn.bid.is_bidding_over():
+                    break
+                current_player = self.players[self.turn.get_current_player()]
+
+            if self.turn.bid.is_bidding_over():
+                self.turn.resolve_second_round_bid()
+                if self.turn.turn_aborted == True:
+                    self._new_turn()
 
     def play_card(self, card):
         while self.turn.turn_aborted:
@@ -96,7 +119,7 @@ class Game:
             if self.turn.is_turn_over():
                 self._advance_next_turn()
         
-    def _play_bots(self, player, status):
+    def _play_bots(self, player: Player, status):
         return self.turn.play_one_card(
                 player.index,
                 card=player.play(
@@ -129,5 +152,16 @@ class Game:
             'team_ns_points': self.team_ns_points,
             'team_ew_points': self.team_ew_points,
             'cards_played': turn_status['cards_played'],
-            'current_player': turn_status['current_player']
+            'current_player': turn_status['current_player'],
+            'starting_player': turn_status['starting_player'],
+            'card_shown': turn_status['card_shown'],
+            'trump_suit': turn_status['trump_suit']
         }
+    
+    def reset_player_index(self):
+        """Resets all player indices to None at the end of the game.
+
+        Allows Player objects to be reused in a new game without stale state.
+        """
+        for player in self.players.values():
+            player.set_player_index(None)
