@@ -155,7 +155,8 @@ class Game:
             'current_player': turn_status['current_player'],
             'starting_player': turn_status['starting_player'],
             'card_shown': turn_status['card_shown'],
-            'trump_suit': turn_status['trump_suit']
+            'trump_suit': turn_status['trump_suit'],
+            'taker': self.turn.bid.taker
         }
     
     def reset_player_index(self):

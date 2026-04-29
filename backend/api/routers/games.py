@@ -73,10 +73,15 @@ def get_player_hand(game_id: int):
     human_player = game.players[human_index]
     return human_player.hand
 
-@router.get('{game_id}/showncard', response_model=CardResponse)
+@router.get('/{game_id}/showncard', response_model=CardResponse)
 def get_card_shown(game_id: int):
     game = get_game_or_404(game_id, games_engine)
     return game.get_status()['card_shown']
+
+@router.get('/{game_id}/status')
+def get_status(game_id: int):
+    game: Game = get_game_or_404(game_id, games_engine)
+    return game.get_status()
 
 
 def get_game_or_404(game_id: int, db: dict[int: Game | GameResponse]) -> Game | GameResponse:
