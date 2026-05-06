@@ -4,7 +4,7 @@ import random
 
 from ..schemas.game import GameCreate, GameResponse, CardPlay, CardResponse
 from ...game.game import Game
-from ...game.card import Card
+from ...game.card import Card, Suit
 from ...game.player import HumanPlayer, BotPlayer, AlwaysTakingBot, Player
 
 
@@ -32,7 +32,7 @@ def create_game(game_create: GameCreate):
             HumanPlayer(game_create.player_id, game_create.player_name),
             BotPlayer(choose_bot_username()),
             BotPlayer(choose_bot_username()),
-            AlwaysTakingBot(choose_bot_username())
+            BotPlayer(choose_bot_username())
         ]
     )
     game.start_game()
@@ -58,7 +58,7 @@ def play(game_id: int, card_play: CardPlay):
     return game.get_status()
 
 @router.post('/{game_id}/bid')
-def bid(game_id: int, takes: bool):
+def bid(game_id: int, takes: bool, suit: Suit = None):
     game: Game = get_game_or_404(game_id, games_engine)
     try:
         game.play_bid(takes)
