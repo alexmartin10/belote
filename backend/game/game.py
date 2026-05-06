@@ -58,64 +58,69 @@ class Game:
         Returns:
             A dictionary mapping player indices to their points for this turn.
         """
+        self.starting_player_index = (self.starting_player_index + 1) % 4
         self.turn = Turn(self.players, self.starting_player_index, Deck())
         self.turn.deal_before_bid()
+        self._open_bidding_phase()
+    
+    def _open_bidding_phase(self):
+        self._make_bots_bid_until_human()
+        #boucle s'arrete si on a un joueur humain ou si un bot a pris
+        #bot a pris :
+        if self.turn.bid.is_bidding_over():
+            self.turn.resolve_second_round_bid()
+        
+        else: #au joueur humain de bid
+            pass
 
-    def play_bid(self, takes):
+    def _make_bots_bid_until_human(self):
         if not self.turn.bid.is_bidding_over():
-            current_player = self.players[self.turn.get_current_player()]
-            while not isinstance(current_player, HumanPlayer):
+            self.current_player = self.players[self.turn.get_current_player()]
+            while not isinstance(self.current_player, HumanPlayer):
                 self.turn.bid_one_player(
-                    current_player.index,
-                    current_player.decide_bid(self.turn.bid.trump_card)
+                    self.current_player.index,
+                    self.current_player.decide_bid(self.turn.bid.trump_card)
                     )
                 if self.turn.bid.is_bidding_over():
                     break
-                current_player = self.players[self.turn.get_current_player()]
+                self.current_player = self.players[self.turn.get_current_player()]        
 
-            self.turn.bid_one_player(current_player.index, takes)
-
-            if not self.turn.bid.is_bidding_over():
-                current_player = self.players[self.turn.get_current_player()]
-
-            while not isinstance(current_player, HumanPlayer):
-                self.turn.bid_one_player(
-                    current_player.index,
-                    current_player.decide_bid(self.turn.bid.trump_card)
-                    )
-                if self.turn.bid.is_bidding_over():
-                    break
-                current_player = self.players[self.turn.get_current_player()]
-
-            if self.turn.bid.is_bidding_over():
-                self.turn.resolve_second_round_bid()
-                if self.turn.turn_aborted == True:
-                    self._new_turn()
+    def play_bid(self, takes, suit=None):
+        if self.turn.bid.is_bidding_over():
+            raise ValueError("Bidding phase is already over")
+        else:
+            self.current_player = self.players[self.turn.get_current_player()]
+            self.turn.bid_one_player(self.current_player.index, takes, suit=suit)
+        self._make_bots_bid_until_human()
+        if self.turn.bid.is_bidding_over():
+            self.turn.resolve_second_round_bid()
+            if self.turn.turn_aborted == True:
+                self._new_turn()
 
     def play_card(self, card):
         while self.turn.turn_aborted:
             self._new_turn()
         if not self.turn.is_turn_over():
             turn_status = self.turn.get_status()
-            current_player = self.players[turn_status['current_player']]
-            while not isinstance(current_player, HumanPlayer):
-                self._play_bots(current_player, turn_status)
+            self.current_player = self.players[turn_status['current_player']]
+            while not isinstance(self.current_player, HumanPlayer):
+                self._play_bots(self.current_player, turn_status)
                 if self.turn.is_turn_over():
                     break
                 turn_status = self.turn.get_status()
-                current_player = self.players[turn_status['current_player']]
+                self.current_player = self.players[turn_status['current_player']]
 
-            self.turn.play_one_card(current_player.index, card)
+            self.turn.play_one_card(self.current_player.index, card)
             if not self.turn.is_turn_over():
                 turn_status = self.turn.get_status()
-                current_player = self.players[turn_status['current_player']]
+                self.current_player = self.players[turn_status['current_player']]
 
-            while not (isinstance(current_player, HumanPlayer) or self.turn.is_turn_over()):
-                self._play_bots(current_player, turn_status)
+            while not (isinstance(self.current_player, HumanPlayer) or self.turn.is_turn_over()):
+                self._play_bots(self.current_player, turn_status)
                 if self.turn.is_turn_over():
                     break
                 turn_status = self.turn.get_status()
-                current_player = self.players[turn_status['current_player']]
+                self.current_player = self.players[turn_status['current_player']]
             if self.turn.is_turn_over():
                 self._advance_next_turn()
         

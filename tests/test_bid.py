@@ -44,6 +44,12 @@ def test_out_of_turn_bid_raises_error(basic_bid: Bid):
         basic_bid.receive_bid(0, True)
 
 
+def test_bid_after_one_player_took_raises_error(basic_bid: Bid):
+    basic_bid.receive_bid(1, True)
+    with pytest.raises(ValueError):
+        basic_bid.receive_bid(2, True)
+        
+
 def test_no_taker_after_two_rounds(basic_bid: Bid):
     for player in [1, 2, 3, 0, 1, 2, 3, 0]:
         basic_bid.receive_bid(player, False)
