@@ -11,7 +11,7 @@ A French card game (Belote) built in Python, designed to be played online in rea
 | Layer | Technology |
 |-------|------------|
 | Game Engine | Python 3.12 |
-| Backend API | FastAPI *(coming soon)* |
+| Backend API | FastAPI |
 | Real-time | WebSockets *(coming soon)* |
 | Database | PostgreSQL + SQLAlchemy *(coming soon)* |
 | Frontend | React *(coming soon)* |

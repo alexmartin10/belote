@@ -151,7 +151,7 @@ class Turn:
             'card_shown': self.trump_card,
             'trump_suit': self.bid.trump_suit
         }
-    
+     
     def get_current_player(self):
         if self.trick is None:
             return self.bid.current_bidder

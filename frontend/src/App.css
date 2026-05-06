@@ -1,184 +1,196 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+/* --- Reset & base --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: #1a1a2e;
+  color: #f0e6d3;
+  min-height: 100vh;
 }
 
-#center {
+/* --- Table de jeu --- */
+.table {
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+  align-items: center;
+  padding: 20px;
+  gap: 20px;
 }
 
-#next-steps {
+.title {
+  font-size: 2rem;
+  color: #d4af37;
+  text-align: center;
+  letter-spacing: 2px;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+/* --- Zone centrale --- */
+.center-zone {
+  background: #2d5a27;
+  border: 3px solid #3a7a32;
+  border-radius: 16px;
+  padding: 30px;
   display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.3);
 }
 
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+.info {
+  font-size: 1.1rem;
+  opacity: 0.9;
 }
 
-#next-steps ul {
-  list-style: none;
-  padding: 0;
+/* --- Scores --- */
+.scores {
+  display: flex;
+  gap: 24px;
+  font-size: 1rem;
+  background: rgba(0,0,0,0.3);
+  padding: 10px 20px;
+  border-radius: 8px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* --- Cartes --- */
+.card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 85px;
+  background: #fffef5;
+  color: #222;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  border: 1px solid #ccc;
+  user-select: none;
+}
+
+.card-shown {
+  width: 80px;
+  height: 110px;
+  font-size: 1.6rem;
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 15px rgba(212,175,55,0.4);
+}
+
+.card-played {
+  margin: 0 4px;
+}
+
+/* --- Pli --- */
+.trick {
   display: flex;
   gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
+/* --- Boutons --- */
+.btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.ticks {
-  position: relative;
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-main {
+  background: #d4af37;
+  color: #1a1a2e;
+  font-weight: bold;
+  font-size: 1.2rem;
+  padding: 14px 32px;
+}
+
+.btn-take {
+  background: #4a9e4a;
+  color: white;
+}
+
+.btn-pass {
+  background: #8b4545;
+  color: white;
+}
+
+.bid-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* --- Main du joueur --- */
+.hand-zone {
+  margin-top: auto;
   width: 100%;
+  padding: 16px 0;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
+.hand {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
-  }
+.card-hand {
+  cursor: default;
+  transition: transform 0.15s, box-shadow 0.15s;
+  padding: 0;
+  font-family: inherit;
+}
+
+.card-hand.playable {
+  cursor: pointer;
+}
+
+.card-hand.playable:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  border-color: #d4af37;
+}
+
+/* --- Couleurs des cartes --- */
+.red {
+  color: #c0392b;
+}
+
+.black {
+  color: #222;
+}
+
+/* --- Erreur --- */
+.error {
+  background: #8b4545;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
 }
