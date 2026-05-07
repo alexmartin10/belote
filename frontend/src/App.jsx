@@ -10,6 +10,7 @@ function App() {
   const [shownCard, setShownCard] = useState(null)
   const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
+  const [bidding, setBidding] = useState(false)
 
   // ---------- helpers ----------
   async function api(path, method = 'GET', body = null) {
@@ -37,6 +38,23 @@ function App() {
     return s
   }
 
+  // Vérifie si on doit enchérir ou si on passe directement au jeu
+  async function checkBidOrPlay(id) {
+    const s = await refreshStatus(id)
+    console.log('checkBidOrPlay status:', s)
+    await refreshHand(id)
+    if (s.taker !== null) {
+      // Un bot a déjà pris → on passe au jeu
+      setShownCard(null)
+      setBidding(false)
+    } else {
+      // L'humain doit enchérir
+      const card = await api(`/games/${id}/showncard`)
+      setShownCard(card)
+      setBidding(true)
+    }
+  }
+
   // ---------- actions ----------
   async function createGame() {
     setLoading(true)
@@ -45,10 +63,7 @@ function App() {
       const data = await api('/games/', 'POST', { player_name: 'alex', player_id: 0 })
       const id = data.game_id
       setGameId(id)
-      await refreshHand(id)
-      const card = await api(`/games/${id}/showncard`)
-      setShownCard(card)
-      await refreshStatus(id)
+      await checkBidOrPlay(id)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -62,8 +77,14 @@ function App() {
       const s = await api(`/games/${gameId}/bid?takes=${takes}`, 'POST')
       setStatus(s)
       await refreshHand(gameId)
-      if (s.trump_suit) {
+
+      if (s.taker !== null) {
+        // Quelqu'un a pris → phase de jeu
         setShownCard(null)
+        setBidding(false)
+      } else {
+        // Soit tour avorté (nouvelle manche), soit deuxième tour d'enchères
+        await checkBidOrPlay(gameId)
       }
     } catch (e) {
       setError(e.message)
@@ -79,6 +100,11 @@ function App() {
       })
       setStatus(s)
       await refreshHand(gameId)
+
+      // Si la manche est finie et la partie continue → nouvelle manche
+      if (!s.game_over) {
+        await checkBidOrPlay(gameId)
+      }
     } catch (e) {
       setError(e.message)
     }
@@ -90,12 +116,13 @@ function App() {
     setShownCard(null)
     setStatus(null)
     setError(null)
+    setBidding(false)
   }
 
   // ---------- phases ----------
   const gameOver = status?.game_over === true
-  const bidPhase = shownCard !== null
-  const playPhase = !bidPhase && status?.trump_suit != null && !gameOver
+  const bidPhase = bidding && shownCard !== null
+  const playPhase = gameId !== null && !bidPhase && !gameOver && status?.taker !== null
 
   // ---------- rendu ----------
   return (
@@ -141,7 +168,7 @@ function App() {
       )}
 
       {/* --- Pli en cours --- */}
-      {playPhase && status.cards_played && (
+      {playPhase && status?.cards_played && (
         <div className="center-zone">
           <p className="info">
             Atout : {status.trump_suit} — Au tour du joueur {status.current_player}
