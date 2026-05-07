@@ -44,6 +44,37 @@ def taker_bot():
     return player
 
 
+def test_sort_hand_trump_suit_at_the_beginning(basic_bot: BotPlayer):
+    basic_bot.sort_hand(Suit.SPADES)
+    assert basic_bot.hand == [
+        Card(Rank.JACK, Suit.SPADES),
+        Card(Rank.TEN, Suit.SPADES),
+        Card(Rank.ACE, Suit.HEARTS),
+        Card(Rank.QUEEN, Suit.HEARTS),
+    ]
+
+def test_sort_hand_trump_suit_at_the_end(basic_bot: BotPlayer):
+    basic_bot.sort_hand(Suit.HEARTS)
+    assert basic_bot.hand == [
+        Card(Rank.ACE, Suit.HEARTS),
+        Card(Rank.QUEEN, Suit.HEARTS),
+        Card(Rank.TEN, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES)
+    ]
+
+def test_sort_hand_no_trump_suit(basic_bot: BotPlayer):
+    """When we have no card of trump suit in hand, 
+    the cards are automatically sorted in this suit order :
+    ['♠', '♣', '♥', '♦']. That's how the sort method naturally
+    sorts all suits."""
+    basic_bot.sort_hand(Suit.DIAMONDS)
+    assert basic_bot.hand == [
+        Card(Rank.TEN, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES),
+        Card(Rank.ACE, Suit.HEARTS),
+        Card(Rank.QUEEN, Suit.HEARTS),
+    ]
+
 # ---------------------------------------------------------------------------
 # BotPlayer — playable_cards
 # ---------------------------------------------------------------------------

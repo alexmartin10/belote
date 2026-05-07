@@ -8,6 +8,8 @@ is a bot or a human, following the polymorphism pattern.
 from .card import Card, Suit
 import numpy as np
 from abc import ABC, abstractmethod
+import functools
+import operator
 
 
 class Player(ABC):
@@ -52,6 +54,13 @@ class Player(ABC):
             hand: List of Card objects to assign as the player's hand.
         """
         self.hand = hand
+
+    def sort_hand(self, trump_suit: Suit):
+        if self.hand:
+            self.hand.sort(key=lambda card: card.strength(trump_suit), reverse=True)
+            print(self.hand)
+            self.hand.sort(key=lambda card: card.suit.value)
+            self.hand.sort(key=lambda card: card.suit != trump_suit)
 
     def show_hand(self):
         """Prints the player's current hand to stdout."""

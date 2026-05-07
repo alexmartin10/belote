@@ -10,7 +10,7 @@ Glossary:
 """
 
 from .deck import Deck
-from .player import BotPlayer
+from .player import Player
 from .trick import Trick
 from .bid import Bid
 
@@ -34,7 +34,7 @@ class Turn:
         trump_card: The face-up card that proposed the trump suit.
     """
 
-    def __init__(self, players: dict[int, BotPlayer], starting_player_index: int, deck: Deck):
+    def __init__(self, players: dict[int, Player], starting_player_index: int, deck: Deck):
         """Initializes a Turn.
 
         Args:
@@ -65,6 +65,8 @@ class Turn:
 
         for index, hand in zip(self.order, hands_before_bid):
             self.players[index].make_hand(hand)
+        
+        self._sort_players_hand(self.trump_card.suit)
 
     def resolve_second_round_bid(self):
         if self.bid.current_bidder is None:
@@ -72,7 +74,12 @@ class Turn:
         else:
             hands = [self.players[i].hand for i in range(4)]
             self.deck.deal_after_bid(self.bid.taker, hands)
+            self._sort_players_hand(self.bid.trump_suit)
             self.trick = Trick(self.players, self.starting_player_index, self.bid.trump_suit)
+
+    def _sort_players_hand(self, trump_suit):
+        for player in self.players.values():
+            player.sort_hand(trump_suit)
 
     def new_turn(self):
         """Placeholder for starting a new turn.
