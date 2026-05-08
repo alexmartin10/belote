@@ -127,7 +127,7 @@ class Game:
             )
     
     def _advance_next_turn(self):
-        turn_points = self.turn.get_status()['points']
+        turn_points = self.turn.get_points()
         self.add_point_one_turn(turn_points)
         if self.is_game_over():
             self.game_over = True
