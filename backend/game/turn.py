@@ -137,7 +137,19 @@ class Turn:
         return points_team_taking_contract > 81
     
     def _check_zero_points(self):
-        pass
+        """
+        Returns the index of a team member from the team that
+        scored 0 points. If both teams have scored points, return None.
+        """
+        points_team_taking_contract = (
+            self.points[self.bid.taker] + self.points[(self.bid.taker + 2) % 4]
+        )
+        if points_team_taking_contract == 0:
+            return self.bid.taker
+        elif points_team_taking_contract == 162:
+            return (self.bid.taker + 1) % 4
+        
+        return None
 
     def get_points(self):
         """Applies contract failure penalty if the contracting team lost.
@@ -146,15 +158,23 @@ class Turn:
         at the Game layer. If not, the opposing team scores 162 and the
         contracting team scores 0.
         """
-        if not self._check_contract():
+        team_member_with_no_points = self._check_zero_points()
+        if team_member_with_no_points is not None:
+            self.points = {
+                team_member_with_no_points: 0,
+                (team_member_with_no_points + 1) % 4: 252,
+                (team_member_with_no_points + 2) % 4: 0,
+                (team_member_with_no_points + 3) % 4: 0
+            }
+
+        elif not self._check_contract():
             self.points = {
                 self.bid.taker: 0,
                 (self.bid.taker + 1) % 4: 162,
                 (self.bid.taker + 2) % 4: 0,
                 (self.bid.taker + 3) % 4: 0
             }
-        # cas capot
-        #cas belote-rebelote
+
         if self.player_has_belote_rebelote is not None:
             self.points[self.player_has_belote_rebelote] += 20
 
