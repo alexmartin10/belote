@@ -56,9 +56,12 @@ class Player(ABC):
         self.hand = hand
 
     def sort_hand(self, trump_suit: Suit):
+        #see https://docs.python.org/3/howto/sorting.html
+        #section Sort Stability to understand why it works
+        #first, sort by strenght, then by color, then put
+        #the trump_suit first.
         if self.hand:
             self.hand.sort(key=lambda card: card.strength(trump_suit), reverse=True)
-            print(self.hand)
             self.hand.sort(key=lambda card: card.suit.value)
             self.hand.sort(key=lambda card: card.suit != trump_suit)
 
