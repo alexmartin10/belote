@@ -53,6 +53,7 @@ class Turn:
         self.turn_aborted = None
         self.turn_finished = None
         self.player_has_belote_rebelote = None
+        self.cards_played_last_trick = None
 
     def deal_before_bid(self):
         """Deals cards and runs the bidding phase.
@@ -121,6 +122,7 @@ class Turn:
             self.turn_finished = True
         
         else:
+            self.cards_played_last_trick = self.trick.cards_played
             self.trick = Trick(self.players, self.starting_player_index, self.trump_card.suit)
 
     def _check_contract(self) -> bool:
@@ -194,7 +196,8 @@ class Turn:
             'cards_played': self.get_cards_played(),
             'starting_player': self.starting_player_index,
             'card_shown': self.trump_card,
-            'trump_suit': self.bid.trump_suit
+            'trump_suit': self.bid.trump_suit,
+            'cards_played_last_trick': self.get_cards_played_last_trick()
         }
     
     def get_current_player(self):
@@ -214,6 +217,12 @@ class Turn:
             return []
         else:
             return self.trick.cards_played
+    
+    def get_cards_played_last_trick(self):
+        if self.cards_played_last_trick is None:
+            return []
+        else:
+            return self.cards_played_last_trick
 
     def is_turn_over(self) -> bool:
         """Checks whether the turn has ended (either finished or aborted).

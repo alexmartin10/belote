@@ -150,6 +150,7 @@ class Game:
             'team_ns_points': self.team_ns_points,
             'team_ew_points': self.team_ew_points,
             'cards_played': turn_status['cards_played'],
+            'cards_played_last_trick': turn_status['cards_played_last_trick'],
             'current_player': turn_status['current_player'],
             'starting_player': turn_status['starting_player'],
             'card_shown': turn_status['card_shown'],
