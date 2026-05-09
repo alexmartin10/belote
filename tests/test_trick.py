@@ -58,3 +58,22 @@ def test_trump_wins_over_normal_ace(basic_trick: Trick):
     assert basic_trick.is_trick_over() is True
     assert basic_trick.leading_player == 0
     assert basic_trick.points == 18
+
+
+def test_first_suit_decide_winner():
+    players = {i: BotPlayer(f"bot{i}") for i in range(4)}
+    players[0].make_hand([Card(Rank.ACE, Suit.CLUBS)])
+    players[1].make_hand([Card(Rank.JACK, Suit.HEARTS), Card(Rank.KING, Suit.DIAMONDS), Card(Rank.EIGHT, Suit.CLUBS)])
+    players[2].make_hand([Card(Rank.NINE, Suit.HEARTS), Card(Rank.QUEEN, Suit.DIAMONDS), Card(Rank.TEN, Suit.CLUBS)])
+    players[3].make_hand([Card(Rank.TEN, Suit.HEARTS), Card(Rank.ACE, Suit.DIAMONDS), Card(Rank.NINE, Suit.CLUBS)])
+    
+    trick = Trick(players, 1, Suit.SPADES)  
+
+    trick.receive_card(1, Card(Rank.JACK, Suit.HEARTS))
+    trick.receive_card(2, Card(Rank.NINE, Suit.HEARTS))
+    trick.receive_card(3, Card(Rank.TEN, Suit.HEARTS))
+    trick.receive_card(0, Card(Rank.ACE, Suit.CLUBS))
+
+    assert trick.is_trick_over() is True
+    assert trick.leading_player == 3
+    assert trick.points == 23      

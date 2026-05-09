@@ -4,7 +4,7 @@ Manages a single trick: card validation, trick winner determination,
 and point counting.
 """
 
-from .card import Suit
+from .card import Suit, Card
 from .player import Player
 
 import numpy as np
@@ -37,12 +37,12 @@ class Trick:
         self.current_player = starting_player_index
         self.starting_player = starting_player_index
         self.trump_suit = trump_suit
-        self.cards_played = []
+        self.cards_played: list[Card] = []
         self.players = players
         self.leading_player = starting_player_index
         self.points = None
 
-    def receive_card(self, player_index: int, card) -> dict:
+    def receive_card(self, player_index: int, card: Card) -> dict:
         """Processes a card played by a player.
 
         Validates that it is the player's turn and that the card is legally
@@ -120,8 +120,10 @@ class Trick:
         The leader is determined by comparing card strengths. Trump cards
         always outrank non-trump cards due to the +100 strength bonus.
         """
-        strengths = [card.strength(self.trump_suit) for card in self.cards_played]
-        arg = int(np.argmax(strengths))
+        suit_to_follow = self.cards_played[0].suit
+        strengths = [card.strength(self.trump_suit) if (card.suit == suit_to_follow or card.suit == self.trump_suit) else 0 for card in self.cards_played]
+        args = [i for i in range(len(strengths))]
+        arg = sorted(args, key=lambda i: strengths[i], reverse=True)[0]
         self.leading_player = (self.starting_player + arg) % 4
 
     def _count_points(self):
