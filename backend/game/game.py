@@ -80,7 +80,7 @@ class Game:
             while not isinstance(current_player, HumanPlayer):
                 self.turn.bid_one_player(
                     current_player.index,
-                    current_player.decide_bid(self.turn.bid.trump_card)
+                    *current_player.decide_bid(self.turn.bid.trump_card, self.turn.bid.round)
                     )
                 if self.turn.bid.is_bidding_over():
                     break
@@ -93,6 +93,7 @@ class Game:
             current_player = self.players[self.turn.get_current_player()]
             self.turn.bid_one_player(current_player.index, takes, suit=suit)
         self._make_bots_bid_until_human()
+
         if self.turn.bid.is_bidding_over():
             self.turn.resolve_second_round_bid()
             if self.turn.turn_aborted == True:
@@ -127,7 +128,7 @@ class Game:
             )
     
     def _advance_next_turn(self):
-        turn_points = self.turn.get_status()['points']
+        turn_points = self.turn.get_points()
         self.add_point_one_turn(turn_points)
         if self.is_game_over():
             self.game_over = True
@@ -149,6 +150,7 @@ class Game:
             'team_ns_points': self.team_ns_points,
             'team_ew_points': self.team_ew_points,
             'cards_played': turn_status['cards_played'],
+            'cards_played_last_trick': turn_status['cards_played_last_trick'],
             'current_player': turn_status['current_player'],
             'starting_player': turn_status['starting_player'],
             'card_shown': turn_status['card_shown'],

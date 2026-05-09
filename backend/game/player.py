@@ -53,6 +53,16 @@ class Player(ABC):
         """
         self.hand = hand
 
+    def sort_hand(self, trump_suit: Suit):
+        #see https://docs.python.org/3/howto/sorting.html
+        #section Sort Stability to understand why it works
+        #first, sort by strenght, then by color, then put
+        #the trump_suit first.
+        if self.hand:
+            self.hand.sort(key=lambda card: card.strength(trump_suit), reverse=True)
+            self.hand.sort(key=lambda card: card.suit.value)
+            self.hand.sort(key=lambda card: card.suit != trump_suit)
+
     def show_hand(self):
         """Prints the player's current hand to stdout."""
         print(self.hand)
@@ -199,7 +209,7 @@ class BotPlayer(Player):
         """
         super().__init__(username)
 
-    def decide_bid(self, trump_card: Card) -> bool:
+    def decide_bid(self, trump_card: Card, round: int) -> bool:
         """Takes the contract if the hand is worth more than 50 points.
 
         Args:
@@ -208,8 +218,19 @@ class BotPlayer(Player):
         Returns:
             True if the hand total exceeds 50 points, False otherwise.
         """
-        points_in_hand = [card.points(trump_card.suit) for card in self.hand]
-        return sum(points_in_hand) > 50
+        points_in_hand = {
+            suit: trump_card.points(suit) + sum([
+                card.points(suit) for card in self.hand
+            ]) for suit in Suit
+        }
+        if points_in_hand[trump_card.suit] > 50:
+            return (True, )
+        else:
+            #take the best points total we have un hand
+            best_suit, points = sorted(points_in_hand.items(), key=lambda item: item[1], reverse=True)[0]
+            if points > 50 and round == 2:
+                return (True, best_suit)
+        return (False, )
 
     def play(self, player_index_leading: int, trump_suit: Suit, cards_played: list[Card]) -> Card:
         """Plays the strongest card if the team leads, the weakest otherwise.
