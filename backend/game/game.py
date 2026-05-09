@@ -118,14 +118,13 @@ class Game:
                 current_player = self.players[self.turn.get_current_player()]
         
     def _play_bots(self, player: Player, status):
-        return self.turn.play_one_card(
-                player.index,
-                card=player.play(
-                    status['leading_player'],
-                    status['trump_suit'],
-                    status['cards_played']
-                )
-            )
+        cards_snapshot = list(status['cards_played'])
+        card = player.play(
+            status['leading_player'],
+            status['trump_suit'],
+            cards_snapshot
+        )
+        return self.turn.play_one_card(player.index, card)
     
     def _advance_next_turn(self):
         turn_points = self.turn.get_points()
