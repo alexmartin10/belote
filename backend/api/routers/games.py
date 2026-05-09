@@ -61,7 +61,7 @@ def play(game_id: int, card_play: CardPlay):
 def bid(game_id: int, takes: bool, suit: Suit = None):
     game: Game = get_game_or_404(game_id, games_engine)
     try:
-        game.play_bid(takes)
+        game.play_bid(takes, suit)
     except ValueError as e:
         raise HTTPException(400, str(e))
     return game.get_status()
