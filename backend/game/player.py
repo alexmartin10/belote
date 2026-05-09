@@ -8,8 +8,6 @@ is a bot or a human, following the polymorphism pattern.
 from .card import Card, Suit
 import numpy as np
 from abc import ABC, abstractmethod
-import functools
-import operator
 
 
 class Player(ABC):
@@ -211,7 +209,7 @@ class BotPlayer(Player):
         """
         super().__init__(username)
 
-    def decide_bid(self, trump_card: Card) -> bool:
+    def decide_bid(self, trump_card: Card, round: int) -> bool:
         """Takes the contract if the hand is worth more than 50 points.
 
         Args:
@@ -220,8 +218,19 @@ class BotPlayer(Player):
         Returns:
             True if the hand total exceeds 50 points, False otherwise.
         """
-        points_in_hand = [card.points(trump_card.suit) for card in self.hand]
-        return sum(points_in_hand) > 50
+        points_in_hand = {
+            suit: trump_card.points(suit) + sum([
+                card.points(suit) for card in self.hand
+            ]) for suit in Suit
+        }
+        if points_in_hand[trump_card.suit] > 50:
+            return (True, )
+        else:
+            #take the best points total we have un hand
+            best_suit, points = sorted(points_in_hand.items(), key=lambda item: item[1], reverse=True)[0]
+            if points > 50 and round == 2:
+                return (True, best_suit)
+        return (False, )
 
     def play(self, player_index_leading: int, trump_suit: Suit, cards_played: list[Card]) -> Card:
         """Plays the strongest card if the team leads, the weakest otherwise.

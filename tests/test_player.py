@@ -75,6 +75,44 @@ def test_sort_hand_no_trump_suit(basic_bot: BotPlayer):
         Card(Rank.QUEEN, Suit.HEARTS),
     ]
 
+def test_bot_takes_when_total_points_over_50():
+    player = BotPlayer('bot')
+    player.set_player_index(0)
+    #10+20+11+14 = 55 points when trump suit is spades
+    player.make_hand([
+        Card(Rank.TEN, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES),
+        Card(Rank.ACE, Suit.SPADES),
+        Card(Rank.NINE, Suit.SPADES),
+    ])
+    assert player.decide_bid(Card(Rank.SEVEN, Suit.SPADES), round=1) == (True,)
+
+
+def test_bot_takes_when_total_points_over_50_with_shown_card():
+    player = BotPlayer('bot')
+    player.set_player_index(0)
+    #10+20+11+14 = 55 points when trump suit is spades
+    player.make_hand([
+        Card(Rank.TEN, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES),
+        Card(Rank.SEVEN, Suit.SPADES),
+        Card(Rank.NINE, Suit.SPADES),
+    ])
+    assert player.decide_bid(Card(Rank.ACE, Suit.SPADES), round=1) == (True,)
+
+
+def test_bot_takes_in_round_2():
+    player = BotPlayer('bot')
+    player.set_player_index(0)
+    #10+20+14 = 44 points when trump suit is spades, +11 with the card shown
+    player.make_hand([
+        Card(Rank.TEN, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES),
+        Card(Rank.SEVEN, Suit.SPADES),
+        Card(Rank.NINE, Suit.SPADES),
+    ])
+    assert player.decide_bid(Card(Rank.ACE, Suit.HEARTS), round=2) == (True, Suit.SPADES)
+
 # ---------------------------------------------------------------------------
 # BotPlayer — playable_cards
 # ---------------------------------------------------------------------------
