@@ -122,7 +122,10 @@ class Turn:
             self.turn_finished = True
         
         else:
-            self.cards_played_last_trick = self.trick.cards_played
+            self.cards_played_last_trick = {
+                index: card for index, card in zip(self.order, self.trick.cards_played)
+            }
+            self.order = [(self.starting_player_index + k) % 4 for k in range(4)]
             self.trick = Trick(self.players, self.starting_player_index, self.trump_card.suit)
 
     def _check_contract(self) -> bool:
@@ -220,7 +223,7 @@ class Turn:
     
     def get_cards_played_last_trick(self):
         if self.cards_played_last_trick is None:
-            return []
+            return {}
         else:
             return self.cards_played_last_trick
 
