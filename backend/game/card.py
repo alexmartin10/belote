@@ -27,55 +27,6 @@ class Rank(Enum):
     ACE = "A"
 
 
-# Point value of each card when not trump
-POINTS_NORMAL = {
-    Rank.SEVEN: 0,
-    Rank.EIGHT: 0,
-    Rank.NINE: 0,
-    Rank.TEN: 10,
-    Rank.JACK: 2,
-    Rank.QUEEN: 3,
-    Rank.KING: 4,
-    Rank.ACE: 11,
-}
-
-# Point value of each card when trump
-POINTS_TRUMP = {
-    Rank.SEVEN: 0,
-    Rank.EIGHT: 0,
-    Rank.NINE: 14,
-    Rank.TEN: 10,
-    Rank.JACK: 20,
-    Rank.QUEEN: 3,
-    Rank.KING: 4,
-    Rank.ACE: 11,
-}
-
-# Relative strength of each card when not trump (used to determine trick winner)
-STRENGTH_NORMAL = {
-    Rank.SEVEN: 0,
-    Rank.EIGHT: 1,
-    Rank.NINE: 2,
-    Rank.TEN: 6,
-    Rank.JACK: 3,
-    Rank.QUEEN: 4,
-    Rank.KING: 5,
-    Rank.ACE: 7,
-}
-
-# Relative strength of each card when trump
-STRENGTH_TRUMP = {
-    Rank.SEVEN: 0,
-    Rank.EIGHT: 1,
-    Rank.NINE: 6,   # The 9 is very strong as trump
-    Rank.TEN: 4,
-    Rank.JACK: 7,   # The Jack is the strongest trump card
-    Rank.QUEEN: 2,
-    Rank.KING: 3,
-    Rank.ACE: 5,
-}
-
-
 class Card:
     """A single playing card.
 
@@ -83,6 +34,54 @@ class Card:
         rank: The rank of the card (7 through Ace).
         suit: The suit of the card (Hearts, Diamonds, Clubs, Spades).
     """
+    # Point value of each card when not trump
+    POINTS_NORMAL = {
+        Rank.SEVEN: 0,
+        Rank.EIGHT: 0,
+        Rank.NINE: 0,
+        Rank.TEN: 10,
+        Rank.JACK: 2,
+        Rank.QUEEN: 3,
+        Rank.KING: 4,
+        Rank.ACE: 11,
+    }
+
+    # Point value of each card when trump
+    POINTS_TRUMP = {
+        Rank.SEVEN: 0,
+        Rank.EIGHT: 0,
+        Rank.NINE: 14,
+        Rank.TEN: 10,
+        Rank.JACK: 20,
+        Rank.QUEEN: 3,
+        Rank.KING: 4,
+        Rank.ACE: 11,
+    }
+
+    # Relative strength of each card when not trump (used to determine trick winner)
+    STRENGTH_NORMAL = {
+        Rank.SEVEN: 0,
+        Rank.EIGHT: 1,
+        Rank.NINE: 2,
+        Rank.TEN: 6,
+        Rank.JACK: 3,
+        Rank.QUEEN: 4,
+        Rank.KING: 5,
+        Rank.ACE: 7,
+    }
+
+    # Relative strength of each card when trump
+    STRENGTH_TRUMP = {
+        Rank.SEVEN: 0,
+        Rank.EIGHT: 1,
+        Rank.NINE: 6,   # The 9 is very strong as trump
+        Rank.TEN: 4,
+        Rank.JACK: 7,   # The Jack is the strongest trump card
+        Rank.QUEEN: 2,
+        Rank.KING: 3,
+        Rank.ACE: 5,
+    }
+
 
     def __init__(self, rank: Rank, suit: Suit):
         """Initializes a Card with a rank and a suit.
@@ -104,8 +103,8 @@ class Card:
             The point value of the card.
         """
         if self.suit == trump_suit:
-            return POINTS_TRUMP[self.rank]
-        return POINTS_NORMAL[self.rank]
+            return Card.POINTS_TRUMP[self.rank]
+        return Card.POINTS_NORMAL[self.rank]
 
     def strength(self, trump_suit: Suit) -> int:
         """Returns the strength of the card used to determine trick winners.
@@ -119,11 +118,11 @@ class Card:
         Returns:
             An integer representing the card's strength.
         """
-        if self.is_trump(trump_suit):
-            return STRENGTH_TRUMP[self.rank] + 100
-        return STRENGTH_NORMAL[self.rank]
+        if self._is_trump(trump_suit):
+            return Card.STRENGTH_TRUMP[self.rank] + 100
+        return Card.STRENGTH_NORMAL[self.rank]
 
-    def is_trump(self, trump_suit: Suit) -> bool:
+    def _is_trump(self, trump_suit: Suit) -> bool:
         """Checks whether the card is a trump card.
 
         Args:
@@ -134,8 +133,14 @@ class Card:
         """
         return self.suit == trump_suit
 
-    def __repr__(self):
+    def __str__(self):
         return f"{self.rank.value}{self.suit.value}"
+    
+    def __repr__(self):
+        return f"Card({self.rank}, {self.suit})"
 
     def __eq__(self, other):
         return self.suit == other.suit and self.rank == other.rank
+    
+    def __hash__(self):
+        return hash((self.rank, self.suit))
