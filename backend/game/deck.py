@@ -17,23 +17,24 @@ class Deck:
         cards: The ordered list of all 32 cards in the deck.
         next_card_index: Index of the next card to be dealt.
     """
+    NUM_PLAYERS = 4
 
     def __init__(self):
         """Initializes a full 32-card deck and builds it."""
-        self.num_players = 4
         self._build()
+        self._next_card_index = None
 
     def _build(self):
         """Builds the full deck of 32 cards (7 through Ace, all 4 suits)."""
-        self.cards = [
+        self._cards = [
             Card(rank, suit)
             for rank in Rank
             for suit in Suit
         ]
 
-    def shuffle(self):
+    def _shuffle(self):
         """Shuffles the deck in place."""
-        random.shuffle(self.cards)
+        random.shuffle(self._cards)
 
     def deal_before_bid(self) -> list[list[Card]]:
         """Shuffles the deck and deals 5 cards to each player before bidding.
@@ -46,16 +47,16 @@ class Deck:
         Returns:
             A list of 4 hands, each containing 5 Card objects.
         """
-        hands = [[] for _ in range(self.num_players)]
-        self.shuffle()
+        hands = [[] for _ in range(self.NUM_PLAYERS)]
+        self._shuffle()
         batch = random.choice([[2, 3], [3, 2]])
-        self.next_card_index = 0
+        self._next_card_index = 0
 
         for n in batch:
-            for i in range(self.num_players):
+            for i in range(self.NUM_PLAYERS):
                 for _ in range(n):
-                    hands[i].append(self.cards[self.next_card_index])
-                    self.next_card_index += 1
+                    hands[i].append(self._cards[self._next_card_index])
+                    self._next_card_index += 1
 
         return hands
 
@@ -68,9 +69,11 @@ class Deck:
         Returns:
             The card at the current next_card_index.
         """
-        return self.cards[self.next_card_index]
+        if self._next_card_index is None:
+            raise IndexError("Must call deal_before_bid before seeing trump card.")
+        return self._cards[self._next_card_index]
 
-    def deal_after_bid(self, taker_index: int, hands: list[list]) -> list[list[Card]]:
+    def deal_after_bid(self, taker_index: int, hands: list[list]) -> None:
         """Completes the deal after a player has accepted the contract.
 
         The taker receives the face-up trump card plus 2 additional cards
@@ -84,18 +87,19 @@ class Deck:
         Returns:
             The updated list of hands, each now containing 8 cards.
         """
-        hands[taker_index].append(self.cards[self.next_card_index])
-        self.next_card_index += 1
+        if self._next_card_index is None:
+            raise IndexError("Must call deal_before_bid before dealing others cards.")
+        
+        hands[taker_index].append(self._cards[self._next_card_index])
+        self._next_card_index += 1
         n_cards_to_distribute = 3
 
-        for i in range(self.num_players):
+        for i in range(self.NUM_PLAYERS):
             if i == taker_index:
                 for _ in range(n_cards_to_distribute - 1):
-                    hands[i].append(self.cards[self.next_card_index])
-                    self.next_card_index += 1
+                    hands[i].append(self._cards[self._next_card_index])
+                    self._next_card_index += 1
             else:
                 for _ in range(n_cards_to_distribute):
-                    hands[i].append(self.cards[self.next_card_index])
-                    self.next_card_index += 1
-
-        return hands
+                    hands[i].append(self._cards[self._next_card_index])
+                    self._next_card_index += 1
