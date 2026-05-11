@@ -93,8 +93,7 @@ class TestBeloteRebelote:
         deck = build_deck_with_belote_rebelote(Suit.HEARTS)
         turn = make_turn_with_fixed_deck(deck)
 
-        # assert turn.player_has_belote_rebelote == 0
-        assert turn._look_for_belote_rebelote() == True
+        assert turn.player_has_belote_rebelote == 0
 
     def test_belote_rebelote_not_detected_without_pair(self):
         """With a normal deck, belote-rebelote is unlikely for a specific player."""

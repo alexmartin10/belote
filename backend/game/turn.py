@@ -83,12 +83,8 @@ class Turn:
 
     def _look_for_belote_rebelote(self):
         for player in self.players.values():
-            print(f"Player {player.index}: {player.hand}")
             trump_queen = Card(Rank.QUEEN, self.bid.trump_suit)
             trump_king = Card(Rank.KING, self.bid.trump_suit)
-            print(f"Looking for {trump_queen} and {trump_king}")
-            print(f"Found queen: {trump_queen in player.hand}")
-            print(f"Found king: {trump_king in player.hand}")
             if trump_queen in player.hand and trump_king in player.hand:
                 self.player_has_belote_rebelote = player.index
                 break
