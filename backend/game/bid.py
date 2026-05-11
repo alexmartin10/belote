@@ -6,8 +6,6 @@ whether to take the contract and which suit will be trump.
 
 from .card import Card, Suit
 
-ALL_SUITS = [suit for suit in Suit]
-
 
 class Bid:
     """Handles the bidding phase of a Belote turn.
@@ -30,6 +28,7 @@ class Bid:
         round: Current bidding round (1 or 2).
         possible_suits: Available suits in round 2 (excludes the initial trump suit).
     """
+    ALL_SUITS = [suit for suit in Suit]
 
     def __init__(self, order: list[int], trump_card: Card):
         """Initializes the bidding phase.
@@ -58,7 +57,7 @@ class Bid:
             self.current_bidder = self.order[self.bid_index]
         elif self.bid_index == 4:
             self.round = 2
-            self.possible_suits = [s for s in ALL_SUITS if s != self.trump_card.suit]
+            self.possible_suits = [s for s in self.ALL_SUITS if s != self.trump_card.suit]
             self.current_bidder = self.order[self.bid_index % 4]
         elif self.bid_index < 8:
             self.current_bidder = self.order[self.bid_index % 4]

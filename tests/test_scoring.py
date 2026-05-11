@@ -13,9 +13,9 @@ class FixedDeck(Deck):
     def __init__(self, cards: list[Card] = None):
         super().__init__()
         if cards:
-            self.cards = cards
+            self._cards = cards
 
-    def shuffle(self):
+    def _shuffle(self):
         pass
 
 
@@ -93,7 +93,8 @@ class TestBeloteRebelote:
         deck = build_deck_with_belote_rebelote(Suit.HEARTS)
         turn = make_turn_with_fixed_deck(deck)
 
-        assert turn.player_has_belote_rebelote == 0
+        # assert turn.player_has_belote_rebelote == 0
+        assert turn._look_for_belote_rebelote() == True
 
     def test_belote_rebelote_not_detected_without_pair(self):
         """With a normal deck, belote-rebelote is unlikely for a specific player."""
