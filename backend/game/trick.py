@@ -64,7 +64,11 @@ class Trick:
             raise ValueError("Not this player's turn")
 
         player = self.players[player_index]
-        if card not in player.playable_cards(self.cards_played, self.trump_suit):
+        if card not in player.playable_cards(
+            self.cards_played,
+            self.trump_suit,
+            self.leading_player
+        ):
             raise ValueError(
                 f"Can't play this card: player {player_index} played {card}, "
                 f"but playable cards were {player.playable_cards(self.cards_played, self.trump_suit)}"

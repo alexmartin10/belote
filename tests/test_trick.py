@@ -15,6 +15,8 @@ def basic_trick():
         Player 3: 10♥, A♦, 9♣
     """
     players = {i: BotPlayer(f"bot{i}") for i in range(4)}
+    for i in players:
+        players[i].set_player_index(i)
     players[0].make_hand([Card(Rank.TEN, Suit.SPADES), Card(Rank.ACE, Suit.CLUBS), Card(Rank.SEVEN, Suit.HEARTS)])
     players[1].make_hand([Card(Rank.JACK, Suit.HEARTS), Card(Rank.KING, Suit.DIAMONDS), Card(Rank.EIGHT, Suit.CLUBS)])
     players[2].make_hand([Card(Rank.NINE, Suit.HEARTS), Card(Rank.QUEEN, Suit.DIAMONDS), Card(Rank.TEN, Suit.CLUBS)])
@@ -62,6 +64,8 @@ def test_trump_wins_over_normal_ace(basic_trick: Trick):
 
 def test_first_suit_decide_winner():
     players = {i: BotPlayer(f"bot{i}") for i in range(4)}
+    for i in players:
+        players[i].set_player_index(i)
     players[0].make_hand([Card(Rank.ACE, Suit.CLUBS)])
     players[1].make_hand([Card(Rank.JACK, Suit.HEARTS), Card(Rank.KING, Suit.DIAMONDS), Card(Rank.EIGHT, Suit.CLUBS)])
     players[2].make_hand([Card(Rank.NINE, Suit.HEARTS), Card(Rank.QUEEN, Suit.DIAMONDS), Card(Rank.TEN, Suit.CLUBS)])
@@ -79,27 +83,10 @@ def test_first_suit_decide_winner():
     assert trick.points == 23
 
 
-def test_first_suit_decide_winner():
-    players = {i: BotPlayer(f"bot{i}") for i in range(4)}
-    players[0].make_hand([Card(Rank.SEVEN, Suit.CLUBS)])
-    players[1].make_hand([Card(Rank.EIGHT, Suit.CLUBS)])
-    players[2].make_hand([Card(Rank.NINE, Suit.HEARTS)])
-    players[3].make_hand([Card(Rank.TEN, Suit.HEARTS)])
-    
-    trick = Trick(players, 0, Suit.SPADES)  
-
-    trick.receive_card(0, Card(Rank.SEVEN, Suit.CLUBS))
-    trick.receive_card(1, Card(Rank.EIGHT, Suit.CLUBS))
-    trick.receive_card(2, Card(Rank.NINE, Suit.HEARTS))
-    trick.receive_card(3, Card(Rank.TEN, Suit.HEARTS))
-
-    assert trick.is_trick_over() is True
-    assert trick.leading_player == 1
-    assert trick.points == 10
-
-
 def test_first_suit_decide_winner_with_strenght_zero():
     players = {i: BotPlayer(f"bot{i}") for i in range(4)}
+    for i in players:
+        players[i].set_player_index(i)
     players[0].make_hand([Card(Rank.SEVEN, Suit.CLUBS)])
     players[1].make_hand([Card(Rank.JACK, Suit.HEARTS)])
     players[2].make_hand([Card(Rank.NINE, Suit.HEARTS)])

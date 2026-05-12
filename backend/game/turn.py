@@ -1,7 +1,7 @@
 """Belote turn logic.
 
 A turn (manche) consists of one bidding phase followed by 8 tricks.
-Turn orchestrates Bid, tTrick, and Player without knowing anything
+Turn orchestrates Bid, Trick, and Player without knowing anything
 about the communication layer above it.
 
 Glossary:
@@ -92,17 +92,6 @@ class Turn:
     def _sort_players_hand(self, trump_suit):
         for player in self.players.values():
             player.sort_hand(trump_suit)
-
-    def new_turn(self):
-        """Placeholder for starting a new turn.
-
-        Responsibility of the Game layer. Raises NotImplementedError
-        if called directly on Turn.
-
-        Raises:
-            NotImplementedError: Always.
-        """
-        raise NotImplementedError
     
     def bid_one_player(self, player_index, takes, suit=None):
         self.bid.receive_bid(player_index, takes, suit=suit)

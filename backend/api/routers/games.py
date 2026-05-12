@@ -5,7 +5,7 @@ import random
 from ..schemas.game import GameCreate, GameResponse, CardPlay, CardResponse
 from ...game.game import Game
 from ...game.card import Card, Suit
-from ...game.player import HumanPlayer, BotPlayer, AlwaysTakingBot, Player
+from ...game.player import HumanPlayer, BotPlayer
 
 
 games_db: dict[int, GameResponse] = {}
