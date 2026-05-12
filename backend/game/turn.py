@@ -236,3 +236,14 @@ class Turn:
         """
         return bool(self.turn_aborted or self.turn_finished)
     
+    @property
+    def bidding_round(self):
+        return self.bid.round
+    
+    @property
+    def taker(self):
+        return self.bid.taker
+    
+    def is_bidding_over(self):
+        return self.bid.is_bidding_over()
+    

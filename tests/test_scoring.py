@@ -80,7 +80,7 @@ def make_turn_with_fixed_deck(deck):
     while not turn.bid.is_bidding_over():
         current = turn.bid.current_bidder
         player = turn.players[current]
-        turn.bid_one_player(current, player.decide_bid(turn.bid.trump_card))
+        turn.bid_one_player(current, player.decide_bid(turn.trump_card))
 
     turn.resolve_second_round_bid()
     return turn

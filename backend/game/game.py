@@ -67,7 +67,7 @@ class Game:
         self._make_bots_bid_until_human()
         #boucle s'arrete si on a un joueur humain ou si un bot a pris
         #bot a pris :
-        if self.turn.bid.is_bidding_over():
+        if self.turn.is_bidding_over():
             self.turn.resolve_second_round_bid()
             self._make_bots_play_until_human()
         
@@ -75,26 +75,26 @@ class Game:
             pass
 
     def _make_bots_bid_until_human(self):
-        if not self.turn.bid.is_bidding_over():
+        if not self.turn.is_bidding_over():
             current_player = self.players[self.turn.get_current_player()]
             while not isinstance(current_player, HumanPlayer):
                 self.turn.bid_one_player(
                     current_player.index,
-                    *current_player.decide_bid(self.turn.bid.trump_card, self.turn.bid.round)
+                    *current_player.decide_bid(self.turn.trump_card, self.turn.bidding_round)
                     )
-                if self.turn.bid.is_bidding_over():
+                if self.turn.is_bidding_over():
                     break
                 current_player = self.players[self.turn.get_current_player()]
 
     def play_bid(self, takes, suit=None):
-        if self.turn.bid.is_bidding_over():
+        if self.turn.is_bidding_over():
             raise ValueError("Bidding phase is already over")
         else:
             current_player = self.players[self.turn.get_current_player()]
             self.turn.bid_one_player(current_player.index, takes, suit=suit)
         self._make_bots_bid_until_human()
 
-        if self.turn.bid.is_bidding_over():
+        if self.turn.is_bidding_over():
             self.turn.resolve_second_round_bid()
             if self.turn.turn_aborted == True:
                 self._new_turn()
@@ -154,8 +154,8 @@ class Game:
             'starting_player': turn_status['starting_player'],
             'card_shown': turn_status['card_shown'],
             'trump_suit': turn_status['trump_suit'],
-            'taker': self.turn.bid.taker,
-            'bid_round': self.turn.bid.round
+            'taker': self.turn.taker,
+            'bid_round': self.turn.bidding_round
         }
     
     def reset_player_index(self):
