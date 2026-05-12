@@ -76,7 +76,7 @@ class Game:
 
     def _make_bots_bid_until_human(self):
         if not self.turn.is_bidding_over():
-            current_player = self.players[self.turn.get_current_player()]
+            current_player = self.players[self.turn.current_player]
             while not isinstance(current_player, HumanPlayer):
                 self.turn.bid_one_player(
                     current_player.index,
@@ -84,13 +84,13 @@ class Game:
                     )
                 if self.turn.is_bidding_over():
                     break
-                current_player = self.players[self.turn.get_current_player()]
+                current_player = self.players[self.turn.current_player]
 
     def play_bid(self, takes, suit=None):
         if self.turn.is_bidding_over():
             raise ValueError("Bidding phase is already over")
         else:
-            current_player = self.players[self.turn.get_current_player()]
+            current_player = self.players[self.turn.current_player]
             self.turn.bid_one_player(current_player.index, takes, suit=suit)
         self._make_bots_bid_until_human()
 
@@ -102,7 +102,7 @@ class Game:
                 self._make_bots_play_until_human()
 
     def play_card(self, card):
-        current_player = self.players[self.turn.get_current_player()]
+        current_player = self.players[self.turn.current_player]
         self.turn.play_one_card(current_player.index, card)
         self._make_bots_play_until_human()
         if self.turn.is_turn_over():
@@ -110,18 +110,18 @@ class Game:
     
     def _make_bots_play_until_human(self):
         if not self.turn.is_turn_over():
-            current_player = self.players[self.turn.get_current_player()]
+            current_player = self.players[self.turn.current_player]
             while not isinstance(current_player, HumanPlayer):
-                self._play_bots(current_player, self.turn.get_status())
+                self._play_bots(current_player)
                 if self.turn.is_turn_over():
                     break
-                current_player = self.players[self.turn.get_current_player()]
+                current_player = self.players[self.turn.current_player]
         
-    def _play_bots(self, player: Player, status):
-        cards_snapshot = list(status['cards_played'])
+    def _play_bots(self, player: Player):
+        cards_snapshot = list(self.turn.cards_played)
         card = player.play(
-            status['leading_player'],
-            status['trump_suit'],
+            self.turn.leading_player,
+            self.turn.trump_suit,
             cards_snapshot
         )
         return self.turn.play_one_card(player.index, card)
@@ -143,17 +143,16 @@ class Game:
         return player.hand
 
     def get_status(self):
-        turn_status = self.turn.get_status()
         return {
             'game_over': self.game_over,
             'team_ns_points': self.team_ns_points,
             'team_ew_points': self.team_ew_points,
-            'cards_played': turn_status['cards_played'],
-            'cards_played_last_trick': turn_status['cards_played_last_trick'],
-            'current_player': turn_status['current_player'],
-            'starting_player': turn_status['starting_player'],
-            'card_shown': turn_status['card_shown'],
-            'trump_suit': turn_status['trump_suit'],
+            'cards_played': self.turn.cards_played(),
+            'cards_played_last_trick': self.turn.cards_played_last_trick(),
+            'current_player': self.turn.current_player(),
+            'starting_player': self.turn.starting_player_index,
+            'card_shown': self.turn.trump_card,
+            'trump_suit': self.turn.trump_suit,
             'taker': self.turn.taker,
             'bid_round': self.turn.bidding_round
         }
