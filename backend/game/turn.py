@@ -44,7 +44,7 @@ class Turn:
             deck: A fresh Deck instance for this turn.
         """
         self._players = players
-        self._starting_player_index = starting_player_index
+        self.starting_player_index = starting_player_index
         self._deck = deck
         self._order = [(starting_player_index + k) % 4 for k in range(4)]
         self._points = {0: 0, 1: 0, 2: 0, 3: 0}
@@ -79,7 +79,7 @@ class Turn:
             self._deck.deal_after_bid(self._bid.taker, hands)
             self._sort_players_hand(self._bid.trump_suit)
             self._look_for_belote_rebelote()
-            self._trick = Trick(self._players, self._starting_player_index, self.trump_suit)
+            self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
 
     def _sort_players_hand(self, trump_suit):
         for player in self._players.values():
@@ -97,7 +97,7 @@ class Turn:
     def _advance_next_trick(self):
         self._tricks_played += 1
         self._points[self._trick.leading_player] += self._trick.points
-        self._starting_player_index = self._trick.leading_player
+        self.starting_player_index = self._trick.leading_player
 
         if self._tricks_played == 8:
             self._points[self._trick.leading_player] += 10
@@ -107,8 +107,8 @@ class Turn:
             self._cards_played_last_trick = {
                 index: card for index, card in zip(self._order, self._trick.cards_played)
             }
-            self._order = [(self._starting_player_index + k) % 4 for k in range(4)]
-            self._trick = Trick(self._players, self._starting_player_index, self.trump_card.suit)
+            self._order = [(self.starting_player_index + k) % 4 for k in range(4)]
+            self._trick = Trick(self._players, self.starting_player_index, self.trump_card.suit)
 
     def _look_for_belote_rebelote(self):
         for player in self._players.values():

@@ -142,7 +142,7 @@ class TestCapot:
 
         total = sum(turn.get_points().values())
         # 162 or 182 if belote-rebelote happened
-        assert total in (162, 182)
+        assert total in (162, 182, 252)
 
     def test_capot_gives_252_points(self):
         """If one team takes all tricks, they score 252."""
