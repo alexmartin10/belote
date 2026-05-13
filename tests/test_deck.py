@@ -9,8 +9,8 @@ def basic_deck():
 
 
 def test_deck_has_no_duplicates(basic_deck: Deck):
-    for card in basic_deck.cards:
-        assert basic_deck.cards.count(card) == 1
+    for card in basic_deck._cards:
+        assert basic_deck._cards.count(card) == 1
 
 
 def test_deal_before_bid_gives_five_cards_per_player(basic_deck: Deck):

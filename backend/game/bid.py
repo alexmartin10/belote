@@ -6,8 +6,6 @@ whether to take the contract and which suit will be trump.
 
 from .card import Card, Suit
 
-ALL_SUITS = [suit for suit in Suit]
-
 
 class Bid:
     """Handles the bidding phase of a Belote turn.
@@ -30,6 +28,7 @@ class Bid:
         round: Current bidding round (1 or 2).
         possible_suits: Available suits in round 2 (excludes the initial trump suit).
     """
+    ALL_SUITS = [suit for suit in Suit]
 
     def __init__(self, order: list[int], trump_card: Card):
         """Initializes the bidding phase.
@@ -38,12 +37,11 @@ class Bid:
             order: Ordered list of player indices for this turn.
             trump_card: The face-up card proposing the initial trump suit.
         """
-        self.order = order
-        self.trump_card = trump_card
+        self._order = order
         self.trump_suit = trump_card.suit
         self.taker = None
-        self.current_bidder = self.order[0]
-        self.bid_index = 0
+        self.current_bidder = self._order[0]
+        self._bids_made = 0
         self.round = 1
 
     def _advance_next_bidder(self):
@@ -52,16 +50,16 @@ class Bid:
         Handles the transition from round 1 to round 2 when all four players
         have passed. Sets current_bidder to None if all 8 bids are exhausted.
         """
-        self.bid_index += 1
+        self._bids_made += 1
 
-        if self.bid_index < 4:
-            self.current_bidder = self.order[self.bid_index]
-        elif self.bid_index == 4:
+        if self._bids_made < 4:
+            self.current_bidder = self._order[self._bids_made]
+        elif self._bids_made == 4:
             self.round = 2
-            self.possible_suits = [s for s in ALL_SUITS if s != self.trump_card.suit]
-            self.current_bidder = self.order[self.bid_index % 4]
-        elif self.bid_index < 8:
-            self.current_bidder = self.order[self.bid_index % 4]
+            self.possible_suits = [s for s in self.ALL_SUITS if s != self.trump_suit]
+            self.current_bidder = self._order[self._bids_made % 4]
+        elif self._bids_made < 8:
+            self.current_bidder = self._order[self._bids_made % 4]
         else:
             self.current_bidder = None
 
@@ -96,8 +94,6 @@ class Bid:
         else:
             self._advance_next_bidder()
 
-        return self.get_state()
-
     def is_bidding_over(self) -> bool:
         """Checks whether the bidding phase has ended.
 
@@ -108,22 +104,3 @@ class Bid:
             True if bidding is over, False otherwise.
         """
         return self.taker is not None or self.current_bidder is None
-
-    def get_state(self) -> dict:
-        """Returns the current bidding state for the communication layer.
-
-        Returns:
-            A dictionary with the following keys:
-                phase: Always 'bidding'.
-                round: Current round (1 or 2).
-                current_bidder: Index of the player whose turn it is, or None.
-                trump_suit: The current trump suit.
-                taker: Index of the player who took the contract, or None.
-        """
-        return {
-            'phase': 'bidding',
-            'round': self.round,
-            'current_bidder': self.current_bidder,
-            'trump_suit': self.trump_suit,
-            'taker': self.taker,
-        }

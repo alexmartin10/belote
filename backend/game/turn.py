@@ -1,7 +1,7 @@
 """Belote turn logic.
 
 A turn (manche) consists of one bidding phase followed by 8 tricks.
-Turn orchestrates Bid, tTrick, and Player without knowing anything
+Turn orchestrates Bid, Trick, and Player without knowing anything
 about the communication layer above it.
 
 Glossary:
@@ -43,17 +43,17 @@ class Turn:
             starting_player_index: Index of the player who starts the turn.
             deck: A fresh Deck instance for this turn.
         """
-        self.players = players
+        self._players = players
         self.starting_player_index = starting_player_index
-        self.deck = deck
-        self.order = [(starting_player_index + k) % 4 for k in range(4)]
-        self.points = {0: 0, 1: 0, 2: 0, 3: 0}
-        self.tricks_played = 0
-        self.trick = None
-        self.turn_aborted = None
-        self.turn_finished = None
-        self.player_has_belote_rebelote = None
-        self.cards_played_last_trick = None
+        self._deck = deck
+        self._order = [(starting_player_index + k) % 4 for k in range(4)]
+        self._points = {0: 0, 1: 0, 2: 0, 3: 0}
+        self._tricks_played = 0
+        self._trick = None
+        self._turn_aborted = None
+        self._turn_finished = None
+        self._player_has_belote_rebelote = None
+        self._cards_played_last_trick = None
 
     def deal_before_bid(self):
         """Deals cards and runs the bidding phase.
@@ -62,71 +62,61 @@ class Turn:
         the bidding phase. If a player takes the contract, completes the
         deal to 8 cards per player. If no one bids, marks the turn as aborted.
         """
-        hands_before_bid = self.deck.deal_before_bid()
-        self.trump_card = self.deck.trump_card()
-        self.bid = Bid(self.order, self.trump_card)
+        hands_before_bid = self._deck.deal_before_bid()
+        self.trump_card = self._deck.trump_card()
+        self._bid = Bid(self._order, self.trump_card)
 
-        for index, hand in zip(self.order, hands_before_bid):
-            self.players[index].make_hand(hand)
+        for index, hand in zip(self._order, hands_before_bid):
+            self._players[index].make_hand(hand)
         
         self._sort_players_hand(self.trump_card.suit)
 
     def resolve_second_round_bid(self):
-        if self.bid.current_bidder is None:
-            self.turn_aborted = True
+        if self._bid.current_bidder is None:
+            self._turn_aborted = True
         else:
-            hands = [self.players[i].hand for i in range(4)]
-            self.deck.deal_after_bid(self.bid.taker, hands)
-            self._sort_players_hand(self.bid.trump_suit)
+            hands = [self._players[i].hand for i in range(4)]
+            self._deck.deal_after_bid(self._bid.taker, hands)
+            self._sort_players_hand(self._bid.trump_suit)
             self._look_for_belote_rebelote()
-            self.trick = Trick(self.players, self.starting_player_index, self.bid.trump_suit)
-
-    def _look_for_belote_rebelote(self):
-        for player in self.players.values():
-            trump_queen =  Card(Rank.QUEEN, self.bid.trump_suit)
-            trump_king = Card(Rank.KING, self.bid.trump_suit)
-            if trump_queen in player.hand and trump_king in player.hand:
-                self.player_has_belote_rebelote = player.index
+            self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
 
     def _sort_players_hand(self, trump_suit):
-        for player in self.players.values():
+        for player in self._players.values():
             player.sort_hand(trump_suit)
-
-    def new_turn(self):
-        """Placeholder for starting a new turn.
-
-        Responsibility of the Game layer. Raises NotImplementedError
-        if called directly on Turn.
-
-        Raises:
-            NotImplementedError: Always.
-        """
-        raise NotImplementedError
     
     def bid_one_player(self, player_index, takes, suit=None):
-        self.bid.receive_bid(player_index, takes, suit=suit)
+        self._bid.receive_bid(player_index, takes, suit=suit)
     
     def play_one_card(self, player_index, card):
-        self.trick.receive_card(player_index, card)
+        self._trick.receive_card(player_index, card)
 
-        if self.trick.is_trick_over():
+        if self._trick.is_trick_over():
             self._advance_next_trick()
 
     def _advance_next_trick(self):
-        self.tricks_played += 1
-        self.points[self.trick.leading_player] += self.trick.points
-        self.starting_player_index = self.trick.leading_player
+        self._tricks_played += 1
+        self._points[self._trick.leading_player] += self._trick.points
+        self.starting_player_index = self._trick.leading_player
 
-        if self.tricks_played == 8:
-            self.points[self.trick.leading_player] += 10
-            self.turn_finished = True
+        if self._tricks_played == 8:
+            self._points[self._trick.leading_player] += 10
+            self._turn_finished = True
         
         else:
-            self.cards_played_last_trick = {
-                index: card for index, card in zip(self.order, self.trick.cards_played)
+            self._cards_played_last_trick = {
+                index: card for index, card in zip(self._order, self._trick.cards_played)
             }
-            self.order = [(self.starting_player_index + k) % 4 for k in range(4)]
-            self.trick = Trick(self.players, self.starting_player_index, self.trump_card.suit)
+            self._order = [(self.starting_player_index + k) % 4 for k in range(4)]
+            self._trick = Trick(self._players, self.starting_player_index, self.trump_card.suit)
+
+    def _look_for_belote_rebelote(self):
+        for player in self._players.values():
+            trump_queen = Card(Rank.QUEEN, self._bid.trump_suit)
+            trump_king = Card(Rank.KING, self._bid.trump_suit)
+            if trump_queen in player.hand and trump_king in player.hand:
+                self._player_has_belote_rebelote = player.index
+                break
 
     def _check_contract(self) -> bool:
         """Checks whether the contracting team fulfilled their contract.
@@ -137,7 +127,7 @@ class Turn:
             True if the contract is fulfilled, False otherwise.
         """
         points_team_taking_contract = (
-            self.points[self.bid.taker] + self.points[(self.bid.taker + 2) % 4]
+            self._points[self._bid.taker] + self._points[(self._bid.taker + 2) % 4]
         )
         return points_team_taking_contract > 81
     
@@ -147,12 +137,12 @@ class Turn:
         scored 0 points. If both teams have scored points, return None.
         """
         points_team_taking_contract = (
-            self.points[self.bid.taker] + self.points[(self.bid.taker + 2) % 4]
+            self._points[self._bid.taker] + self._points[(self._bid.taker + 2) % 4]
         )
         if points_team_taking_contract == 0:
-            return self.bid.taker
+            return self._bid.taker
         elif points_team_taking_contract == 162:
-            return (self.bid.taker + 1) % 4
+            return (self._bid.taker + 1) % 4
         
         return None
 
@@ -165,7 +155,7 @@ class Turn:
         """
         team_member_with_no_points = self._check_zero_points()
         if team_member_with_no_points is not None:
-            self.points = {
+            self._points = {
                 team_member_with_no_points: 0,
                 (team_member_with_no_points + 1) % 4: 252,
                 (team_member_with_no_points + 2) % 4: 0,
@@ -173,65 +163,73 @@ class Turn:
             }
 
         elif not self._check_contract():
-            self.points = {
-                self.bid.taker: 0,
-                (self.bid.taker + 1) % 4: 162,
-                (self.bid.taker + 2) % 4: 0,
-                (self.bid.taker + 3) % 4: 0
+            self._points = {
+                self._bid.taker: 0,
+                (self._bid.taker + 1) % 4: 162,
+                (self._bid.taker + 2) % 4: 0,
+                (self._bid.taker + 3) % 4: 0
             }
 
-        if self.player_has_belote_rebelote is not None:
-            self.points[self.player_has_belote_rebelote] += 20
+        if self._player_has_belote_rebelote is not None:
+            self._points[self._player_has_belote_rebelote] += 20
 
-        return self.points
-
-    def get_status(self) -> dict:
-        """Returns the current turn status for the communication layer.
-
-        Returns:
-            A dictionary with the following key:
-                points: Dictionary mapping player indices to their points.
-        """
-        return {
-            'current_player': self.get_current_player(),
-            'leading_player': self.get_leading_player(),
-            'trump_suit': self.trump_card.suit,
-            'cards_played': self.get_cards_played(),
-            'starting_player': self.starting_player_index,
-            'card_shown': self.trump_card,
-            'trump_suit': self.bid.trump_suit,
-            'cards_played_last_trick': self.get_cards_played_last_trick()
-        }
-     
-    def get_current_player(self):
-        if self.trick is None:
-            return self.bid.current_bidder
+        return self._points
+    
+    def points(self, points):
+        self._points = points
+    
+    @property
+    def current_player(self):
+        if self._trick is None:
+            return self._bid.current_bidder
         else:
-            return self.trick.current_player
-        
-    def get_leading_player(self):
-        if self.trick is None:
+            return self._trick.current_player
+    
+    @property
+    def leading_player(self):
+        if self._trick is None:
             return None
         else:
-            return self.trick.leading_player
+            return self._trick.leading_player
     
-    def get_cards_played(self):
-        if self.trick is None:
+    @property
+    def cards_played(self):
+        if self._trick is None:
             return []
         else:
-            return self.trick.cards_played
+            return self._trick.cards_played
     
-    def get_cards_played_last_trick(self):
-        if self.cards_played_last_trick is None:
+    @property
+    def cards_played_last_trick(self):
+        if self._cards_played_last_trick is None:
             return {}
         else:
-            return self.cards_played_last_trick
-
+            return self._cards_played_last_trick
+    
+    @property
+    def bidding_round(self):
+        return self._bid.round
+    
+    @property
+    def taker(self):
+        return self._bid.taker
+    
+    @property
+    def trump_suit(self):
+        return self._bid.trump_suit
+    
+    @property
+    def turn_aborted(self):
+        return self._turn_aborted
+    
     def is_turn_over(self) -> bool:
         """Checks whether the turn has ended (either finished or aborted).
 
         Returns:
             True if the turn is over, False otherwise.
         """
-        return bool(self.turn_aborted or self.turn_finished)
+        return bool(self._turn_aborted or self._turn_finished)
+    
+    def is_bidding_over(self):
+        return self._bid.is_bidding_over()
     
