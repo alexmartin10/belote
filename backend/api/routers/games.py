@@ -69,7 +69,7 @@ def bid(game_id: int, takes: bool, suit: Suit = None):
 @router.get('/{game_id}/hand', response_model=list[CardResponse])
 def get_player_hand(game_id: int):
     game = get_game_or_404(game_id, games_engine)
-    human_index = game.get_human_player_index(game)
+    human_index = game.get_human_player_index()
     return game.get_player_hand(human_index)
 
 @router.get('/{game_id}/showncard', response_model=CardResponse)
