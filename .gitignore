@@ -4,3 +4,6 @@
 .env
 *.egg-info/
 *pytest_cache
+
+#frontend
+frontend/.vite

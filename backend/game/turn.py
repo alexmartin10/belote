@@ -69,15 +69,15 @@ class Turn:
         for index, hand in zip(self._order, hands_before_bid):
             self._players[index].make_hand(hand)
         
-        self._sort_players_hand(self.trump_card.suit)
+        self._sort_players_hand(self.trump_suit)
 
     def resolve_second_round_bid(self):
         if self._bid.current_bidder is None:
             self._turn_aborted = True
         else:
             hands = [self._players[i].hand for i in range(4)]
-            self._deck.deal_after_bid(self._bid.taker, hands)
-            self._sort_players_hand(self._bid.trump_suit)
+            self._deck.deal_after_bid(self.taker, hands)
+            self._sort_players_hand(self.trump_suit)
             self._look_for_belote_rebelote()
             self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
 
@@ -96,24 +96,24 @@ class Turn:
 
     def _advance_next_trick(self):
         self._tricks_played += 1
-        self._points[self._trick.leading_player] += self._trick.points
-        self.starting_player_index = self._trick.leading_player
+        self._points[self.leading_player] += self._trick.points
+        self.starting_player_index = self.leading_player
 
         if self._tricks_played == 8:
-            self._points[self._trick.leading_player] += 10
+            self._points[self.leading_player] += 10
             self._turn_finished = True
         
         else:
             self._cards_played_last_trick = {
-                index: card for index, card in zip(self._order, self._trick.cards_played)
+                index: card for index, card in zip(self._order, self.cards_played)
             }
             self._order = [(self.starting_player_index + k) % 4 for k in range(4)]
-            self._trick = Trick(self._players, self.starting_player_index, self.trump_card.suit)
+            self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
 
     def _look_for_belote_rebelote(self):
         for player in self._players.values():
-            trump_queen = Card(Rank.QUEEN, self._bid.trump_suit)
-            trump_king = Card(Rank.KING, self._bid.trump_suit)
+            trump_queen = Card(Rank.QUEEN, self.trump_suit)
+            trump_king = Card(Rank.KING, self.trump_suit)
             if trump_queen in player.hand and trump_king in player.hand:
                 self._player_has_belote_rebelote = player.index
                 break
@@ -127,7 +127,7 @@ class Turn:
             True if the contract is fulfilled, False otherwise.
         """
         points_team_taking_contract = (
-            self._points[self._bid.taker] + self._points[(self._bid.taker + 2) % 4]
+            self._points[self.taker] + self._points[(self.taker + 2) % 4]
         )
         return points_team_taking_contract > 81
     
@@ -137,12 +137,12 @@ class Turn:
         scored 0 points. If both teams have scored points, return None.
         """
         points_team_taking_contract = (
-            self._points[self._bid.taker] + self._points[(self._bid.taker + 2) % 4]
+            self._points[self.taker] + self._points[(self.taker + 2) % 4]
         )
         if points_team_taking_contract == 0:
-            return self._bid.taker
+            return self.taker
         elif points_team_taking_contract == 162:
-            return (self._bid.taker + 1) % 4
+            return (self.taker + 1) % 4
         
         return None
 
