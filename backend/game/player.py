@@ -6,7 +6,7 @@ is a bot or a human, following the polymorphism pattern.
 """
 
 from .card import Card, Suit
-import numpy as np
+from ..utils.utils import argmin, argmax
 from abc import ABC, abstractmethod
 
 
@@ -17,7 +17,6 @@ class Player(ABC):
     Also provides shared logic for hand management and playable card rules.
 
     Attributes:
-        id: Permanent identifier for the player (e.g. database ID).
         username: Display name of the player.
         index: Position in the current game (0 to 3). Assigned at game start
             via set_player_index() and reset to None after the game ends.
@@ -28,7 +27,6 @@ class Player(ABC):
         """Initializes a Player with a permanent id and username.
 
         Args:
-            id: Permanent identifier for the player.
             username: Display name of the player.
         """
         self.username = username
@@ -43,7 +41,6 @@ class Player(ABC):
             The index that was set.
         """
         self.index = index
-        return index
 
     def make_hand(self, hand: list[Card]):
         """Assigns a hand of cards to the player.
@@ -63,11 +60,7 @@ class Player(ABC):
             self.hand.sort(key=lambda card: card.suit.value)
             self.hand.sort(key=lambda card: card.suit != trump_suit)
 
-    def show_hand(self):
-        """Prints the player's current hand to stdout."""
-        print(self.hand)
-
-    def cards_of_this_suit_in_hand(self, suit: Suit) -> list[Card]:
+    def _cards_of_this_suit_in_hand(self, suit: Suit) -> list[Card]:
         """Returns all cards of a given suit in the player's hand.
 
         Args:
@@ -78,7 +71,8 @@ class Player(ABC):
         """
         return [card for card in self.hand if card.suit == suit]
 
-    def playable_cards(self, cards_played: list[Card], trump_suit: Suit) -> list[Card]:
+    def playable_cards(self, cards_played: list[Card], trump_suit: Suit, 
+                       player_index_leading: int) -> list[Card]:
         """Returns the list of cards the player is legally allowed to play.
 
         Enforces Belote suit-following, cutting, and trump-climbing rules:
@@ -104,15 +98,33 @@ class Player(ABC):
         if suit_to_follow == trump_suit:
             return self._playable_cards_trump_suit(cards_played, trump_suit)
 
-        cards_of_suit_to_follow_in_hand = self.cards_of_this_suit_in_hand(suit_to_follow)
+        cards_of_suit_to_follow_in_hand = self._cards_of_this_suit_in_hand(suit_to_follow)
         if len(cards_of_suit_to_follow_in_hand) > 0:
             return cards_of_suit_to_follow_in_hand
+        
+        if self._is_player_leading_in_my_team(player_index_leading):
+        #if we have no card the same color of the first card played but 
+        #our mate is leading, we can play any card we want
+            return self.hand
 
-        trump_cards_in_hand = self.cards_of_this_suit_in_hand(trump_suit)
+        trump_cards_in_hand = self._cards_of_this_suit_in_hand(trump_suit)
         if len(trump_cards_in_hand) > 0:
             return self._playable_cards_trump_suit(cards_played, trump_suit)
 
         return self.hand
+    
+    def _is_player_leading_in_my_team(self, player_index_leading: int) -> bool:
+        """Checks whether the current trick leader is on the same team.
+
+        Teams are (0, 2) and (1, 3).
+
+        Args:
+            player_index_leading: Index of the player currently winning the trick.
+
+        Returns:
+            True if the leader is a teammate, False otherwise.
+        """
+        return (player_index_leading % 2) == (self.index % 2)
 
     def _playable_cards_trump_suit(self, cards_played: list[Card], trump_suit: Suit) -> list[Card]:
         """Returns legal trump cards to play, enforcing the climbing rule.
@@ -129,7 +141,7 @@ class Player(ABC):
         Returns:
             A list of legally playable cards.
         """
-        trump_cards_in_hand = self.cards_of_this_suit_in_hand(trump_suit)
+        trump_cards_in_hand = self._cards_of_this_suit_in_hand(trump_suit)
         if len(trump_cards_in_hand) == 0:
             return self.hand
 
@@ -148,12 +160,13 @@ class Player(ABC):
 
         if len(higher_cards_in_hand) > 0:
             return higher_cards_in_hand
+        
         return trump_cards_in_hand
 
     def remove_card_played(self, card: Card):
         """Removes a card from the player's hand after it has been played.
 
-        Called by Fold after validating the card is legal to play.
+        Called by Trick after validating the card is legal to play.
 
         Args:
             card: The card to remove from the hand.
@@ -224,13 +237,14 @@ class BotPlayer(Player):
             ]) for suit in Suit
         }
         if points_in_hand[trump_card.suit] > 50:
-            return (True, )
+            return (True,)
         else:
             #take the best points total we have un hand
             best_suit, points = sorted(points_in_hand.items(), key=lambda item: item[1], reverse=True)[0]
             if points > 50 and round == 2:
                 return (True, best_suit)
-        return (False, )
+            
+        return (False,)
 
     def play(self, player_index_leading: int, trump_suit: Suit, cards_played: list[Card]) -> Card:
         """Plays the strongest card if the team leads, the weakest otherwise.
@@ -243,30 +257,17 @@ class BotPlayer(Player):
         Returns:
             The selected card to play.
         """
-        cards_available_to_play = self.playable_cards(cards_played, trump_suit)
+        cards_available_to_play = self.playable_cards(cards_played, trump_suit, player_index_leading)
         cards_available_strength = [
             card.strength(trump_suit) for card in cards_available_to_play
         ]
 
-        if self.is_player_leading_in_my_team(player_index_leading):
-            arg = int(np.argmax(cards_available_strength))
+        if self._is_player_leading_in_my_team(player_index_leading):
+            arg = argmax(cards_available_strength)
         else:
-            arg = int(np.argmin(cards_available_strength))
+            arg = argmin(cards_available_strength)
 
         return cards_available_to_play[arg]
-
-    def is_player_leading_in_my_team(self, player_index_leading: int) -> bool:
-        """Checks whether the current trick leader is on the same team.
-
-        Teams are (0, 2) and (1, 3).
-
-        Args:
-            player_index_leading: Index of the player currently winning the trick.
-
-        Returns:
-            True if the leader is a teammate, False otherwise.
-        """
-        return (player_index_leading % 2) == (self.index % 2)
 
 
 class HumanPlayer(Player):
@@ -275,7 +276,7 @@ class HumanPlayer(Player):
         self.id = id
     
     def decide_bid(self, trump_card):
-        return False
+        return (False,)
     
     def play(self):
         raise NotImplementedError
@@ -296,7 +297,7 @@ class AlwaysTakingBot(Player):
         Returns:
             Always True.
         """
-        return True
+        return (True,)
 
     def play(self, player_index_leading: int, trump_suit: Suit, cards_played: list[Card]) -> Card:
         """Plays the first legally available card.
@@ -309,4 +310,4 @@ class AlwaysTakingBot(Player):
         Returns:
             The first card in the list of playable cards.
         """
-        return self.playable_cards(cards_played, trump_suit)[0]
+        return self.playable_cards(cards_played, trump_suit, player_index_leading)[0]

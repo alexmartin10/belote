@@ -5,7 +5,7 @@ import random
 from ..schemas.game import GameCreate, GameResponse, CardPlay, CardResponse
 from ...game.game import Game
 from ...game.card import Card, Suit
-from ...game.player import HumanPlayer, BotPlayer, AlwaysTakingBot, Player
+from ...game.player import HumanPlayer, BotPlayer
 
 
 games_db: dict[int, GameResponse] = {}
@@ -69,9 +69,8 @@ def bid(game_id: int, takes: bool, suit: Suit = None):
 @router.get('/{game_id}/hand', response_model=list[CardResponse])
 def get_player_hand(game_id: int):
     game = get_game_or_404(game_id, games_engine)
-    human_index = get_human_player_index(game)
-    human_player = game.players[human_index]
-    return human_player.hand
+    human_index = game.get_human_player_index(game)
+    return game.get_player_hand(human_index)
 
 @router.get('/{game_id}/showncard', response_model=CardResponse)
 def get_card_shown(game_id: int):
@@ -98,6 +97,3 @@ def choose_bot_username():
 def count_human_players_in_game(game):
     """for the future to put in GameResponse"""
     raise NotImplementedError
-
-def get_human_player_index(game: Game) -> int:
-    return [i  for i in game.players.keys() if isinstance(game.players[i], HumanPlayer)][0]

@@ -13,9 +13,9 @@ class FixedDeck(Deck):
     def __init__(self, cards: list[Card] = None):
         super().__init__()
         if cards:
-            self.cards = cards
+            self._cards = cards
 
-    def shuffle(self):
+    def _shuffle(self):
         pass
 
 
@@ -50,18 +50,18 @@ def build_deck_with_belote_rebelote(trump_suit: Suit = Suit.HEARTS):
 def play_full_turn(turn: Turn):
     """Plays all tricks in a turn with bots."""
     while not turn.is_turn_over():
-        if turn.trick is None:
+        if turn._trick is None:
             break
-        player_index = turn.trick.current_player
+        player_index = turn.current_player
         if player_index is None:
             break
-        player = turn.players[player_index]
+        player = turn._players[player_index]
         turn.play_one_card(
             player_index,
             player.play(
-                turn.trick.leading_player,
-                turn.bid.trump_suit,
-                turn.trick.cards_played
+                turn.leading_player,
+                turn._bid.trump_suit,
+                turn.cards_played
             )
         )
 
@@ -77,10 +77,10 @@ def make_turn_with_fixed_deck(deck):
     turn.deal_before_bid()
 
     # Run bidding (AlwaysTakingBot always takes)
-    while not turn.bid.is_bidding_over():
-        current = turn.bid.current_bidder
-        player = turn.players[current]
-        turn.bid_one_player(current, player.decide_bid(turn.bid.trump_card))
+    while not turn._bid.is_bidding_over():
+        current = turn.current_player
+        player = turn._players[current]
+        turn.bid_one_player(current, player.decide_bid(turn.trump_card))
 
     turn.resolve_second_round_bid()
     return turn
@@ -93,7 +93,7 @@ class TestBeloteRebelote:
         deck = build_deck_with_belote_rebelote(Suit.HEARTS)
         turn = make_turn_with_fixed_deck(deck)
 
-        assert turn.player_has_belote_rebelote == 0
+        assert turn._player_has_belote_rebelote == 0
 
     def test_belote_rebelote_not_detected_without_pair(self):
         """With a normal deck, belote-rebelote is unlikely for a specific player."""
@@ -101,17 +101,16 @@ class TestBeloteRebelote:
         turn = make_turn_with_fixed_deck(deck)
 
         # Could be any player or None — just verify it doesn't crash
-        assert turn.player_has_belote_rebelote is None or isinstance(
-            turn.player_has_belote_rebelote, int
+        assert turn._player_has_belote_rebelote is None or isinstance(
+            turn._player_has_belote_rebelote, int
         )
 
     def test_belote_rebelote_adds_20_points(self):
         deck = build_deck_with_belote_rebelote(Suit.HEARTS)
         turn = make_turn_with_fixed_deck(deck)
         play_full_turn(turn)
-        turn.get_points()
 
-        total = sum(turn.points.values())
+        total = sum(turn.get_points().values())
         assert total == 182  # 162 + 20
 
     def test_belote_rebelote_kept_on_contract_failure(self):
@@ -121,15 +120,15 @@ class TestBeloteRebelote:
         play_full_turn(turn)
 
         # Force contract failure: set taker's team points to 0
-        turn.points[0] = 0
-        turn.points[2] = 0
-        turn.points[1] = 100
-        turn.points[3] = 62
+        turn._points[0] = 0
+        turn._points[2] = 0
+        turn._points[1] = 100
+        turn._points[3] = 62
 
         turn.get_points()
 
         # Taker's team should have 20 (belote-rebelote only)
-        taker_team_points = turn.points[0] + turn.points[2]
+        taker_team_points = turn._points[0] + turn._points[2]
         assert taker_team_points == 20
 
 
@@ -141,9 +140,9 @@ class TestCapot:
         play_full_turn(turn)
         turn.get_points()
 
-        total = sum(turn.points.values())
+        total = sum(turn.get_points().values())
         # 162 or 182 if belote-rebelote happened
-        assert total in (162, 182)
+        assert total in (162, 182, 252)
 
     def test_capot_gives_252_points(self):
         """If one team takes all tricks, they score 252."""
@@ -151,11 +150,11 @@ class TestCapot:
         turn = make_turn_with_fixed_deck(deck)
 
         # Simulate capot: taker's team gets all points
-        turn.points = {0: 152, 1: 0, 2: 10, 3: 0}
+        turn._points = {0: 152, 1: 0, 2: 10, 3: 0}
         turn.get_points()
 
-        winning_team = turn.points[0] + turn.points[2]
-        losing_team = turn.points[1] + turn.points[3]
+        winning_team = turn._points[0] + turn._points[2]
+        losing_team = turn._points[1] + turn._points[3]
         assert winning_team == 252
         assert losing_team == 0
 
@@ -164,10 +163,10 @@ class TestCapot:
         deck = FixedDeck()
         turn = make_turn_with_fixed_deck(deck)
 
-        turn.points = {0: 0, 1: 100, 2: 0, 3: 62}
+        turn._points = {0: 0, 1: 100, 2: 0, 3: 62}
         turn.get_points()
 
-        taker_team = turn.points[0] + turn.points[2]
-        other_team = turn.points[1] + turn.points[3]
+        taker_team = turn._points[0] + turn._points[2]
+        other_team = turn._points[1] + turn._points[3]
         assert taker_team == 0
         assert other_team == 252

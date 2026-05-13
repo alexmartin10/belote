@@ -4,10 +4,9 @@ Manages a single trick: card validation, trick winner determination,
 and point counting.
 """
 
-from .card import Suit
+from .card import Suit, Card
 from .player import Player
-
-import numpy as np
+from ..utils.utils import argmax
 
 
 class Trick:
@@ -35,14 +34,14 @@ class Trick:
             trump_suit: The current trump suit.
         """
         self.current_player = starting_player_index
-        self.starting_player = starting_player_index
-        self.trump_suit = trump_suit
-        self.cards_played = []
-        self.players = players
+        self._starting_player = starting_player_index
         self.leading_player = starting_player_index
+        self._trump_suit = trump_suit
+        self.cards_played: list[Card] = []
+        self._players = players
         self.points = None
 
-    def receive_card(self, player_index: int, card) -> dict:
+    def receive_card(self, player_index: int, card: Card) -> dict:
         """Processes a card played by a player.
 
         Validates that it is the player's turn and that the card is legally
@@ -63,18 +62,22 @@ class Trick:
         if player_index != self.current_player:
             raise ValueError("Not this player's turn")
 
-        player = self.players[player_index]
-        if card not in player.playable_cards(self.cards_played, self.trump_suit):
+        player = self._players[player_index]
+        if card not in player.playable_cards(
+            self.cards_played,
+            self._trump_suit,
+            self.leading_player
+        ):
             raise ValueError(
                 f"Can't play this card: player {player_index} played {card}, "
-                f"but playable cards were {player.playable_cards(self.cards_played, self.trump_suit)}"
+                f"but playable cards were {player.playable_cards(
+                    self.cards_played, self._trump_suit, self.leading_player
+                )}"
             )
 
         self.cards_played.append(card)
         player.remove_card_played(card)
         self._advance_next_player()
-
-        return self.get_state()
 
     def _advance_next_player(self):
         """Advances the trick to the next player.
@@ -85,9 +88,9 @@ class Trick:
         self.current_player = (self.current_player + 1) % 4
         self._get_leader()
 
-        if self.current_player == self.starting_player:
+        if self.current_player == self._starting_player:
             self.current_player = None
-            self._count_points()
+            self.points = sum(card.points(self._trump_suit) for card in self.cards_played)
 
     def is_trick_over(self) -> bool:
         """Checks whether all four players have played.
@@ -97,36 +100,14 @@ class Trick:
         """
         return self.current_player is None
 
-    def get_state(self) -> dict:
-        """Returns the current trick state for the communication layer.
-
-        Returns:
-            A dictionary with the following keys:
-                current_player: Index of the next player to play, or None.
-                cards_played: Ordered list of cards played so far.
-                leading_player: Index of the player currently winning the trick.
-                points: Total point value of the trick, or None if not yet complete.
-        """
-        return {
-            'current_player': self.current_player,
-            'cards_played': self.cards_played,
-            'leading_player': self.leading_player,
-            'points': self.points
-        }
-
     def _get_leader(self):
         """Updates the leading player based on the cards played so far.
 
         The leader is determined by comparing card strengths. Trump cards
         always outrank non-trump cards due to the +100 strength bonus.
         """
-        strengths = [card.strength(self.trump_suit) for card in self.cards_played]
-        arg = int(np.argmax(strengths))
-        self.leading_player = (self.starting_player + arg) % 4
-
-    def _count_points(self):
-        """Sums the point values of all cards played in the trick.
-
-        Called automatically when the trick ends. Result is stored in self.points.
-        """
-        self.points = sum(card.points(self.trump_suit) for card in self.cards_played)
+        suit_to_follow = self.cards_played[0].suit
+        strengths = [card.strength(self._trump_suit) 
+                     if (card.suit == suit_to_follow or card.suit == self._trump_suit) 
+                     else 0 for card in self.cards_played]
+        self.leading_player = (self._starting_player + argmax(strengths)) % 4
