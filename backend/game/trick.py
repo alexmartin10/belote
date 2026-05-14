@@ -17,11 +17,8 @@ class Trick:
 
     Attributes:
         current_player: Index of the player whose turn it is, or None when the trick is over.
-        starting_player: Index of the player who leads the trick.
-        trump_suit: The current trump suit.
-        cards_played: Ordered list of cards played in this trick.
-        players: Dictionary mapping player indices to Player objects.
         leading_player: Index of the player currently winning the trick.
+        cards_played: Ordered list of cards played in this trick.
         points: Total point value of the trick, set when the trick ends.
     """
 
@@ -41,7 +38,7 @@ class Trick:
         self._players = players
         self.points = None
 
-    def receive_card(self, player_index: int, card: Card) -> dict:
+    def receive_card(self, player_index: int, card: Card) -> None:
         """Processes a card played by a player.
 
         Validates that it is the player's turn and that the card is legally
@@ -51,9 +48,6 @@ class Trick:
         Args:
             player_index: Index of the player playing the card.
             card: The Card object being played.
-
-        Returns:
-            The current trick state as a dictionary.
 
         Raises:
             ValueError: If it is not the player's turn.
@@ -103,8 +97,9 @@ class Trick:
     def _get_leader(self):
         """Updates the leading player based on the cards played so far.
 
-        The leader is determined by comparing card strengths. Trump cards
-        always outrank non-trump cards due to the +100 strength bonus.
+        Only cards of the led suit or trump suit are considered when computing
+        strengths. Cards of other suits are assigned strength 0. The player
+        with the highest strength card wins the trick.
         """
         suit_to_follow = self.cards_played[0].suit
         strengths = [card.strength(self._trump_suit) 

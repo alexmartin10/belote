@@ -19,12 +19,9 @@ class Bid:
     rounds, avoiding explicit round-switching logic.
 
     Attributes:
-        order: Ordered list of player indices for this turn.
-        trump_card: The face-up card that proposes the initial trump suit.
         trump_suit: The current trump suit (may change in round 2).
         taker: Index of the player who accepted the contract, or None.
         current_bidder: Index of the player whose turn it is to bid.
-        bid_index: Current position in the bidding sequence (0 to 7).
         round: Current bidding round (1 or 2).
         possible_suits: Available suits in round 2 (excludes the initial trump suit).
     """
@@ -76,7 +73,7 @@ class Bid:
             suit: The chosen trump suit (required in round 2 when taking).
 
         Returns:
-            The current bidding state as a dictionary.
+            None.
 
         Raises:
             ValueError: If it is not the player's turn to bid.

@@ -36,9 +36,6 @@ class Player(ABC):
 
         Args:
             index: Position in the game (0 to 3), or None to reset after game ends.
-
-        Returns:
-            The index that was set.
         """
         self.index = index
 
@@ -51,6 +48,16 @@ class Player(ABC):
         self.hand = hand
 
     def sort_hand(self, trump_suit: Suit):
+        """Sorts the player's hand by suit and strength.
+
+        Cards are grouped by suit, with the trump suit placed first.
+        Within each suit, cards are sorted from strongest to weakest.
+        Uses a stable sort applied in three passes (strength, suit value,
+        trump first) as described in the Python sorting documentation.
+
+        Args:
+            trump_suit: The current trump suit, placed first in the hand.
+        """
         #see https://docs.python.org/3/howto/sorting.html
         #section Sort Stability to understand why it works
         #first, sort by strenght, then by color, then put
@@ -79,12 +86,14 @@ class Player(ABC):
             - If leading the trick, any card can be played.
             - If the led suit is trump, trump rules apply (see _playable_cards_trump_suit).
             - If the player has cards of the led suit, they must play one.
-            - If the player cannot follow suit but has trump cards, they must cut.
-            - If the player has neither, any card can be played.
+            - If the player cannot follow suit but a teammate is leading, any card can be played.
+            - If the player cannot follow suit and no teammate is leading, they must cut with trump.
+            - If the player has neither the led suit nor trump, any card can be played.
 
         Args:
             cards_played: Cards already played in the current trick.
             trump_suit: The current trump suit.
+            player_index_leading: Index of the player currently winning the trick.
 
         Returns:
             A list of legally playable cards.
@@ -179,9 +188,11 @@ class Player(ABC):
 
         Args:
             trump_card: The face-up card proposing the trump suit.
+            round: The current bidding round (1 or 2).
 
         Returns:
-            True to accept the contract, False to pass.
+            A tuple (True,) to accept, (True, suit) to accept with a specific
+            suit in round 2, or (False,) to pass.
         """
         pass
 
@@ -204,7 +215,8 @@ class BotPlayer(Player):
     """A bot player with a basic strategy.
 
     Bidding strategy: takes the contract if the hand scores more than 50 points
-    at the proposed trump suit.
+    at the proposed trump suit. In round 2, takes the best available suit if it
+    scores more than 50 points.
 
     Playing strategy: plays the strongest available card when the team is
     winning the trick, the weakest otherwise.
@@ -217,19 +229,24 @@ class BotPlayer(Player):
         """Initializes a BotPlayer.
 
         Args:
-            id: Permanent identifier for the player.
-            username: Display name of the player.
+            username: Display name of the bot player.
         """
         super().__init__(username)
 
-    def decide_bid(self, trump_card: Card, round: int) -> bool:
+    def decide_bid(self, trump_card: Card, round: int) -> tuple:
         """Takes the contract if the hand is worth more than 50 points.
+
+        In round 1, evaluates the proposed trump suit only. In round 2,
+        evaluates all suits and takes with the best one if it exceeds 50 points.
+        The trump card itself is included in the point calculation.
 
         Args:
             trump_card: The face-up card proposing the trump suit.
+            round: The current bidding round (1 or 2).
 
         Returns:
-            True if the hand total exceeds 50 points, False otherwise.
+            A tuple (True,) to take with the proposed suit, (True, suit) to
+            take with a specific suit in round 2, or (False,) to pass.
         """
         points_in_hand = {
             suit: trump_card.points(suit) + sum([
@@ -271,14 +288,50 @@ class BotPlayer(Player):
 
 
 class HumanPlayer(Player):
+    """A human player whose decisions are provided by the communication layer.
+
+    HumanPlayer does not implement game logic for bidding or playing.
+    Decisions are injected externally via the API (FastAPI endpoints).
+    The decide_bid method always passes to allow the bidding phase to
+    proceed until the API provides the human's actual decision.
+
+    Attributes:
+        id: Permanent identifier for the player (e.g. database ID).
+        Inherits all other attributes from Player.
+    """
+
     def __init__(self, id, username):
+        """Initializes a HumanPlayer with a permanent id and username.
+
+        Args:
+            id: Permanent identifier for the player.
+            username: Display name of the player.
+        """
         super().__init__(username)
         self.id = id
     
     def decide_bid(self, trump_card):
+        """Always passes during the automatic bidding phase.
+
+        The human's actual bid is injected by the API via Game.play_bid().
+        This method exists only to satisfy the abstract interface and allow
+        the engine to advance past the human's turn during initialization.
+
+        Args:
+            trump_card: The face-up card proposing the trump suit (unused).
+
+        Returns:
+            A tuple (False,) indicating a pass.
+        """
         return (False,)
     
     def play(self):
+        """Not implemented — human card selection is handled by the API.
+
+        Raises:
+            NotImplementedError: Always. Card selection for human players
+                is injected via Game.play_card() from the communication layer.
+        """
         raise NotImplementedError
 
 class AlwaysTakingBot(Player):
@@ -288,14 +341,14 @@ class AlwaysTakingBot(Player):
     full turn simulation without relying on BotPlayer's bidding heuristic.
     """
 
-    def decide_bid(self, trump_card: Card) -> bool:
+    def decide_bid(self, trump_card: Card) -> tuple:
         """Always accepts the contract.
 
         Args:
-            trump_card: The face-up card proposing the trump suit.
+            trump_card: The face-up card proposing the trump suit (unused).
 
         Returns:
-            Always True.
+            A tuple (True,) indicating acceptance of the contract.
         """
         return (True,)
 

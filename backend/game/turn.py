@@ -24,15 +24,16 @@ class Turn:
     input; all decisions are produced by Player subclasses and passed in.
 
     Attributes:
-        players: Dictionary mapping player indices to Player objects.
-        starting_player_index: Index of the player who leads the first trick.
-        deck: The Deck instance used for this turn.
-        order: Ordered list of player indices starting from starting_player_index.
-        points: Dictionary mapping player indices to their accumulated points.
-        turn_aborted: True if no player took the contract; None otherwise.
-        turn_finished: True after all 8 tricks have been played; None otherwise.
-        bid: The Bid instance managing the bidding phase.
+        starting_player_index: Index of the player who leads the current trick.
         trump_card: The face-up card that proposed the trump suit.
+        current_player: Index of the player whose turn it is (property).
+        leading_player: Index of the player currently winning the trick (property).
+        cards_played: Cards played so far in the current trick (property).
+        cards_played_last_trick: Mapping of player index to card for the last trick (property).
+        trump_suit: The current trump suit (property).
+        taker: Index of the player who took the contract, or None (property).
+        bidding_round: The current bidding round, 1 or 2 (property).
+        turn_aborted: True if no player took the contract, None otherwise (property).
     """
 
     def __init__(self, players: dict[int, Player], starting_player_index: int, deck: Deck):
@@ -56,11 +57,12 @@ class Turn:
         self._cards_played_last_trick = None
 
     def deal_before_bid(self):
-        """Deals cards and runs the bidding phase.
+        """Deals 5 cards to each player and initializes the bidding phase.
 
-        Deals 5 cards to each player, reveals the trump card, then runs
-        the bidding phase. If a player takes the contract, completes the
-        deal to 8 cards per player. If no one bids, marks the turn as aborted.
+        Shuffles the deck, deals cards in two passes, reveals the trump card,
+        and creates a Bid instance. Hands are sorted by suit after dealing.
+        Does not run the bidding itself — bidding is driven externally via
+        bid_one_player().
         """
         hands_before_bid = self._deck.deal_before_bid()
         self.trump_card = self._deck.trump_card()
@@ -72,6 +74,12 @@ class Turn:
         self._sort_players_hand(self.trump_suit)
 
     def resolve_second_round_bid(self):
+        """Finalizes the turn after bidding is complete.
+
+        If no player took the contract (current_bidder is None), marks the
+        turn as aborted. Otherwise, completes the deal to 8 cards per player,
+        sorts hands, checks for belote-rebelote, and creates the first Trick.
+        """
         if self._bid.current_bidder is None:
             self._turn_aborted = True
         else:
@@ -82,19 +90,62 @@ class Turn:
             self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
 
     def _sort_players_hand(self, trump_suit):
+        """Sorts all players' hands by suit and strength.
+
+        Trump suit is placed first, with cards sorted from strongest to weakest
+        within each suit. Delegates to each Player's sort_hand() method.
+
+        Args:
+            trump_suit: The current trump suit to prioritize in the sort.
+        """
         for player in self._players.values():
             player.sort_hand(trump_suit)
     
     def bid_one_player(self, player_index, takes, suit=None):
+        """Submits a single bid decision to the bidding phase.
+
+        Delegates to Bid.receive_bid(). Called once per player per bidding turn,
+        whether the player is a bot or the decision comes from the API.
+
+        Args:
+            player_index: Index of the player submitting the bid.
+            takes: True if the player accepts the contract, False to pass.
+            suit: The chosen trump suit (required in round 2 when taking).
+
+        Raises:
+            ValueError: If it is not the player's turn to bid.
+            ValueError: If an invalid suit is provided in round 2.
+        """
         self._bid.receive_bid(player_index, takes, suit=suit)
     
     def play_one_card(self, player_index, card):
+        """Submits a single card to the current trick.
+
+        Delegates validation and state advancement to Trick.receive_card().
+        If the trick ends after this card, advances to the next trick or
+        marks the turn as finished.
+
+        Args:
+            player_index: Index of the player playing the card.
+            card: The Card object being played.
+
+        Raises:
+            ValueError: If it is not the player's turn.
+            ValueError: If the card is not legally playable.
+        """
         self._trick.receive_card(player_index, card)
 
         if self._trick.is_trick_over():
             self._advance_next_trick()
 
     def _advance_next_trick(self):
+        """Updates state after a trick ends and prepares the next one.
+
+        Increments the trick counter, awards points to the trick winner,
+        updates the starting player for the next trick. On the 8th trick,
+        awards the 10 de der bonus and marks the turn as finished. Otherwise,
+        saves the last trick's cards and creates a new Trick instance.
+        """
         self._tricks_played += 1
         self._points[self.leading_player] += self._trick.points
         self.starting_player_index = self.leading_player
@@ -111,6 +162,12 @@ class Turn:
             self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
 
     def _look_for_belote_rebelote(self):
+        """Detects whether any player holds both the King and Queen of trump.
+
+        If found, stores that player's index in _player_has_belote_rebelote
+        so that 20 bonus points can be awarded when get_points() is called.
+        Only the first matching player is recorded.
+        """
         for player in self._players.values():
             trump_queen = Card(Rank.QUEEN, self.trump_suit)
             trump_king = Card(Rank.KING, self.trump_suit)
@@ -132,9 +189,14 @@ class Turn:
         return points_team_taking_contract > 81
     
     def _check_zero_points(self):
-        """
-        Returns the index of a team member from the team that
-        scored 0 points. If both teams have scored points, return None.
+        """Returns a team member index from the team that scored 0 points (capot).
+
+        Checks whether the contracting team scored all 162 points (capot against
+        the opposing team) or 0 points (capot against the contracting team).
+
+        Returns:
+            The index of a player from the team that scored 0 points, or None
+            if both teams have scored points.
         """
         points_team_taking_contract = (
             self._points[self.taker] + self._points[(self.taker + 2) % 4]
@@ -147,11 +209,17 @@ class Turn:
         return None
 
     def get_points(self):
-        """Applies contract failure penalty if the contracting team lost.
+        """Computes and returns the final points for this turn.
 
-        If the contract is fulfilled, points are left unchanged and computed
-        at the Game layer. If not, the opposing team scores 162 and the
-        contracting team scores 0.
+        Applies scoring rules in order:
+        - If a capot occurred, the winning team scores 252 and the other 0.
+        - If the contract was not fulfilled, the opposing team scores 162 and
+          the contracting team scores 0.
+        - If belote-rebelote was detected, adds 20 bonus points to that player,
+          regardless of contract outcome.
+
+        Returns:
+            A dictionary mapping player indices to their final point totals.
         """
         team_member_with_no_points = self._check_zero_points()
         if team_member_with_no_points is not None:
@@ -176,10 +244,26 @@ class Turn:
         return self._points
     
     def points(self, points):
+        """Sets the internal points dictionary directly.
+
+        Used in tests to inject specific point distributions for scoring
+        logic verification without playing a full turn.
+
+        Args:
+            points: A dictionary mapping player indices to point values.
+        """
         self._points = points
     
     @property
     def current_player(self):
+        """Returns the index of the player whose turn it is.
+
+        During bidding, returns the current bidder. During trick play,
+        returns the current trick player. Returns None when a phase is over.
+
+        Returns:
+            An integer player index, or None if the current phase is complete.
+        """
         if self._trick is None:
             return self._bid.current_bidder
         else:
@@ -187,6 +271,13 @@ class Turn:
     
     @property
     def leading_player(self):
+        """Returns the index of the player currently winning the trick.
+
+        Returns None during the bidding phase before any trick has started.
+
+        Returns:
+            An integer player index, or None if no trick is in progress.
+        """
         if self._trick is None:
             return None
         else:
@@ -194,6 +285,13 @@ class Turn:
     
     @property
     def cards_played(self):
+        """Returns the cards played so far in the current trick.
+
+        Returns an empty list during the bidding phase before any trick has started.
+
+        Returns:
+            A list of Card objects played in the current trick.
+        """
         if self._trick is None:
             return []
         else:
@@ -201,6 +299,14 @@ class Turn:
     
     @property
     def cards_played_last_trick(self):
+        """Returns a mapping of player indices to the card each played in the last trick.
+
+        Returns an empty dict if no trick has been completed yet.
+
+        Returns:
+            A dictionary mapping player index to Card for the previous trick,
+            or an empty dict if this is the first trick.
+        """
         if self._cards_played_last_trick is None:
             return {}
         else:
@@ -208,18 +314,41 @@ class Turn:
     
     @property
     def bidding_round(self):
+        """Returns the current bidding round (1 or 2).
+
+        Returns:
+            An integer indicating the active bidding round.
+        """
         return self._bid.round
     
     @property
     def taker(self):
+        """Returns the index of the player who accepted the contract, or None.
+
+        Returns:
+            An integer player index if someone has taken, otherwise None.
+        """
         return self._bid.taker
     
     @property
     def trump_suit(self):
+        """Returns the current trump suit.
+
+        In round 1 this is the suit of the face-up card. In round 2 it may
+        have been changed by the player who took the contract.
+
+        Returns:
+            A Suit enum value representing the current trump suit.
+        """
         return self._bid.trump_suit
     
     @property
     def turn_aborted(self):
+        """Returns True if the turn was aborted because no player took the contract.
+
+        Returns:
+            True if aborted, None otherwise.
+        """
         return self._turn_aborted
     
     def is_turn_over(self) -> bool:
@@ -231,5 +360,11 @@ class Turn:
         return bool(self._turn_aborted or self._turn_finished)
     
     def is_bidding_over(self):
+        """Checks whether the bidding phase has ended.
+
+        Delegates to Bid.is_bidding_over().
+
+        Returns:
+            True if bidding is over, False otherwise.
+        """
         return self._bid.is_bidding_over()
-    
