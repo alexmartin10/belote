@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException
 
 import random
 
-from ..schemas.game import GameCreate, GameResponse, CardPlay, CardResponse
+from ..schemas.game import GameCreate, GameResponse, CardPlay, CardResponse, GameStatus
 from ...game.game import Game
 from ...game.card import Card, Suit
 from ...game.player import HumanPlayer, BotPlayer
@@ -55,6 +55,8 @@ def play(game_id: int, card_play: CardPlay):
         game.play_card(card)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    if game.get_status()['game_over']:
+        games_db[game_id].game_status = GameStatus.over
     return game.get_status()
 
 @router.post('/{game_id}/bid')
