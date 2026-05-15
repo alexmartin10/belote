@@ -170,9 +170,15 @@ class Game:
         card = player.play(
             self._turn.leading_player,
             self._turn.trump_suit,
-            cards_snapshot
+            cards_snapshot,
+            self._turn.taker
         )
         return self._turn.play_one_card(player.index, card)
+    
+    def _reset_bots_memory(self):
+        for player in self._players.values():
+            if isinstance(player, BotPlayer):
+                player.reset_memory()
     
     def _advance_next_turn(self):
         """Finalizes the current turn and starts a new one if the game continues.
@@ -187,6 +193,7 @@ class Game:
             self._game_over = True
             self.reset_player_index()
         else:
+            self._reset_bots_memory()
             self._new_turn()
 
     def _add_point_one_turn(self, dict_points: dict):

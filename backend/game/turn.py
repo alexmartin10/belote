@@ -10,11 +10,11 @@ Glossary:
 """
 
 from .deck import Deck
-from .player import Player
+from .player import Player, BotPlayer
 from .trick import Trick
 from .bid import Bid
 from .card import Card, Rank, Suit
-
+from functools import reduce
 
 class Turn:
     """Orchestrates a full Belote round (bidding + 8 tricks).
@@ -158,8 +158,14 @@ class Turn:
             self._cards_played_last_trick = {
                 index: card for index, card in zip(self._order, self.cards_played)
             }
+            self.save_trick_for_bots()
             self._order = [(self.starting_player_index + k) % 4 for k in range(4)]
             self._trick = Trick(self._players, self.starting_player_index, self.trump_suit)
+    
+    def save_trick_for_bots(self):
+        for player in self._players.values():
+            if isinstance(player, BotPlayer):
+                player.save_trick(list(self.cards_played_last_trick.values()))
 
     def _look_for_belote_rebelote(self):
         """Detects whether any player holds both the King and Queen of trump.

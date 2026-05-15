@@ -5,7 +5,7 @@ The engine calls decide_bid() and play() without knowing whether the player
 is a bot or a human, following the polymorphism pattern.
 """
 
-from .card import Card, Suit
+from .card import Card, Suit, Rank
 from ..utils.utils import argmin, argmax
 from abc import ABC, abstractmethod
 
@@ -67,17 +67,6 @@ class Player(ABC):
             self.hand.sort(key=lambda card: card.suit.value)
             self.hand.sort(key=lambda card: card.suit != trump_suit)
 
-    def _cards_of_this_suit_in_hand(self, suit: Suit) -> list[Card]:
-        """Returns all cards of a given suit in the player's hand.
-
-        Args:
-            suit: The suit to filter by.
-
-        Returns:
-            A list of cards matching the given suit.
-        """
-        return [card for card in self.hand if card.suit == suit]
-
     def playable_cards(self, cards_played: list[Card], trump_suit: Suit, 
                        player_index_leading: int) -> list[Card]:
         """Returns the list of cards the player is legally allowed to play.
@@ -107,33 +96,41 @@ class Player(ABC):
         if suit_to_follow == trump_suit:
             return self._playable_cards_trump_suit(cards_played, trump_suit)
 
-        cards_of_suit_to_follow_in_hand = self._cards_of_this_suit_in_hand(suit_to_follow)
+        cards_of_suit_to_follow_in_hand = self.retrieve_cards_from_container(
+            self.hand,
+            return_type=list,
+            suit=suit_to_follow
+        )
         if len(cards_of_suit_to_follow_in_hand) > 0:
             return cards_of_suit_to_follow_in_hand
         
-        if self._is_player_leading_in_my_team(player_index_leading):
+        if self._is_this_player_in_my_team(player_index_leading):
         #if we have no card the same color of the first card played but 
         #our mate is leading, we can play any card we want
             return self.hand
 
-        trump_cards_in_hand = self._cards_of_this_suit_in_hand(trump_suit)
+        trump_cards_in_hand = self.retrieve_cards_from_container(
+            self.hand,
+            return_type=list,
+            suit=trump_suit
+        )
         if len(trump_cards_in_hand) > 0:
             return self._playable_cards_trump_suit(cards_played, trump_suit)
 
         return self.hand
     
-    def _is_player_leading_in_my_team(self, player_index_leading: int) -> bool:
-        """Checks whether the current trick leader is on the same team.
+    def _is_this_player_in_my_team(self, player_index: int) -> bool:
+        """Checks whether the given player is on the same team.
 
         Teams are (0, 2) and (1, 3).
 
         Args:
-            player_index_leading: Index of the player currently winning the trick.
+            player_index: Index of the player to check.
 
         Returns:
             True if the leader is a teammate, False otherwise.
         """
-        return (player_index_leading % 2) == (self.index % 2)
+        return (player_index % 2) == (self.index % 2)
 
     def _playable_cards_trump_suit(self, cards_played: list[Card], trump_suit: Suit) -> list[Card]:
         """Returns legal trump cards to play, enforcing the climbing rule.
@@ -150,7 +147,11 @@ class Player(ABC):
         Returns:
             A list of legally playable cards.
         """
-        trump_cards_in_hand = self._cards_of_this_suit_in_hand(trump_suit)
+        trump_cards_in_hand = self.retrieve_cards_from_container(
+            self.hand,
+            return_type=list,
+            suit=trump_suit
+        )
         if len(trump_cards_in_hand) == 0:
             return self.hand
 
@@ -210,6 +211,22 @@ class Player(ABC):
         """
         pass
 
+    @staticmethod
+    def retrieve_cards_from_container(container, return_type=list, suit=None, rank=None):
+        if suit is None and rank is None:
+            return return_type(container)
+
+        # Normalize to sets for uniform filtering
+        suits = {suit} if isinstance(suit, Suit) else set(suit) if suit is not None else None
+        ranks = {rank} if isinstance(rank, Rank) else set(rank) if rank is not None else None
+
+        result = [
+            card for card in container
+            if (suits is None or card.suit in suits)
+            and (ranks is None or card.rank in ranks)
+        ]
+
+        return return_type(result)
 
 class BotPlayer(Player):
     """A bot player with a basic strategy.
@@ -222,16 +239,28 @@ class BotPlayer(Player):
     winning the trick, the weakest otherwise.
 
     Attributes:
-        Inherits all attributes from Player.
+        username: Display name of the player.
+        index: Position in the current game (0 to 3). Assigned at game start
+            via set_player_index() and reset to None after the game ends.
+        hand: The player's current cards.
+        level: Bot's level (between 1-3)
     """
 
-    def __init__(self, username: str):
+    def __init__(self, username: str, level: int = 1):
         """Initializes a BotPlayer.
 
         Args:
             username: Display name of the bot player.
         """
         super().__init__(username)
+        self._check_level(level)
+        self._cards_played_in_turn = set()
+    
+    def _check_level(self, level):
+        if level in (1, 2, 3):
+            self._level = level
+        else:
+            raise ValueError("Level must be between 1-3")
 
     def decide_bid(self, trump_card: Card, round: int) -> tuple:
         """Takes the contract if the hand is worth more than 50 points.
@@ -262,8 +291,17 @@ class BotPlayer(Player):
                 return (True, best_suit)
             
         return (False,)
+    
+    def save_trick(self, cards_played: list[Card]):
+        self._cards_played_in_turn = self._cards_played_in_turn.union(set(cards_played))
 
-    def play(self, player_index_leading: int, trump_suit: Suit, cards_played: list[Card]) -> Card:
+    def play(
+            self,
+            player_index_leading: int,
+            trump_suit: Suit,
+            cards_played: list[Card],
+            taker: int
+        ) -> Card:
         """Plays the strongest card if the team leads, the weakest otherwise.
 
         Args:
@@ -274,17 +312,100 @@ class BotPlayer(Player):
         Returns:
             The selected card to play.
         """
+        if self._level == 1:
+            return self.play_level_one(
+                player_index_leading,
+                trump_suit,
+                cards_played,
+                taker
+            )
+    
+    def play_level_one(
+            self,
+            player_index_leading: int,
+            trump_suit: Suit,
+            cards_played: list[Card],
+            taker: int
+        ) -> Card:
+        non_trump_aces_played = self.retrieve_cards_from_container(
+            self._cards_played_in_turn,
+            return_type=set,
+            suit=[suit for suit in Suit if suit != trump_suit],
+            rank=Rank.ACE
+        )
         cards_available_to_play = self.playable_cards(cards_played, trump_suit, player_index_leading)
-        cards_available_strength = [
-            card.strength(trump_suit) for card in cards_available_to_play
-        ]
+        cards_available_to_play.sort(key=lambda card: card.strength(trump_suit), reverse=True)
 
-        if self._is_player_leading_in_my_team(player_index_leading):
-            arg = argmax(cards_available_strength)
+        #Bot Strategy
+        #if bot has JACK Trump, play it 
+        if Card(Rank.JACK, trump_suit) in cards_available_to_play:
+            return Card(Rank.JACK, trump_suit)
+        
+        #if only one card possible, play it
+        if len(cards_available_to_play) == 1:
+            return cards_available_to_play[0]
+        
+        if len(cards_played) == 0:  #bot starts the trick
+            #If bot has a trump card, it will be first because of the strenght bonus
+            best_card = cards_available_to_play[0]
+            #If the taker is in bot's team, play highest trump card if possible
+            if best_card.suit == trump_suit and self._is_this_player_in_my_team(taker):
+                return best_card
+            #taker not in bot's team : forget trumps
+            cards_available_to_play = self.retrieve_cards_from_container(
+                cards_available_to_play,
+                suit=[suit for suit in Suit if suit != trump_suit],
+            )
+            if not cards_available_to_play: #bot has all the trumps
+                return self.playable_cards(cards_played, trump_suit, player_index_leading)[0]
+            best_card = cards_available_to_play[0]
+            #bot has no trump card or taker not in his team, check if he has Ace
+            if best_card.rank == Rank.ACE:
+                return best_card
+            #bot has no ace, check if he has a ten the color of which the ace has been played
+            elif best_card.rank == Rank.TEN and Card(Rank.ACE, best_card.suit) in non_trump_aces_played:
+                return best_card
+            #else return worst card
+            else:
+                return cards_available_to_play[-1]
+            
+        elif len(cards_played) == 3:    #bot ends the trick
+            best_card = cards_available_to_play[0]
+            #our best card makes us win the trick
+            if best_card.strength(trump_suit) > max([card.strength(trump_suit) 
+                                                     for card in cards_played]):
+                return best_card
+            #our teammate is leading
+            elif self._is_this_player_in_my_team(player_index_leading):
+                return best_card
+            else:
+                return cards_available_to_play[-1]
+        
         else:
-            arg = argmin(cards_available_strength)
+            best_card = cards_available_to_play[0]
+            #first card is trump, play best if taker is in our team, else worst
+            if cards_played[0].suit == trump_suit:
+                if self._is_this_player_in_my_team(taker):
+                    return best_card
+                else:
+                    return cards_available_to_play[-1]
+                
+            #cut with our best trump if possible
+            if best_card.suit == trump_suit:
+                return best_card
+            
+            #unless it'a ten and the ace of same color has not been played,
+            #play best card available
+            if best_card.strength(trump_suit) > max([card.strength(trump_suit) 
+                                                    for card in cards_played]):
+                if best_card.rank == Rank.TEN and Card(Rank.ACE, best_card.suit) in non_trump_aces_played:
+                    return cards_available_to_play[-1]
+                return best_card
+            
+            return cards_available_to_play[-1]
 
-        return cards_available_to_play[arg]
+    def reset_memory(self):
+        self._cards_played_in_turn = set()
 
 
 class HumanPlayer(Player):
