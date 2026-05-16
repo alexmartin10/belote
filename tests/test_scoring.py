@@ -61,7 +61,8 @@ def play_full_turn(turn: Turn):
             player.play(
                 turn.leading_player,
                 turn._bid.trump_suit,
-                turn.cards_played
+                turn.cards_played,
+                turn.taker
             )
         )
 
@@ -69,7 +70,6 @@ def play_full_turn(turn: Turn):
 def make_turn_with_fixed_deck(deck):
     """Creates a turn with AlwaysTakingBot at index 0 and 3 BotPlayers."""
     players = {i: BotPlayer(f'bot{i}') for i in range(4)}
-    players[0] = AlwaysTakingBot('taker')
     for i, player in players.items():
         player.set_player_index(i)
 
@@ -80,7 +80,7 @@ def make_turn_with_fixed_deck(deck):
     while not turn._bid.is_bidding_over():
         current = turn.current_player
         player = turn._players[current]
-        turn.bid_one_player(current, player.decide_bid(turn.trump_card))
+        turn.bid_one_player(current, player.decide_bid(turn.trump_card, turn.bidding_round))
 
     turn.resolve_second_round_bid()
     return turn
