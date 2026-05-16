@@ -1,5 +1,6 @@
-from backend.game.player import BotPlayer, AlwaysTakingBot
+from backend.game.player import BotPlayer, AlwaysTakingBot, Player
 from backend.game.card import Card, Rank, Suit
+from backend.game.deck import Deck
 import pytest
 
 
@@ -20,20 +21,6 @@ def same_elements(a, b):
 def basic_bot():
     """A BotPlayer (index 0) holding 10♠, J♠, A♥, Q♥."""
     player = BotPlayer('bot')
-    player.set_player_index(0)
-    player.make_hand([
-        Card(Rank.TEN, Suit.SPADES),
-        Card(Rank.JACK, Suit.SPADES),
-        Card(Rank.ACE, Suit.HEARTS),
-        Card(Rank.QUEEN, Suit.HEARTS),
-    ])
-    return player
-
-
-@pytest.fixture
-def taker_bot():
-    """An AlwaysTakingBot (index 0) holding 10♠, J♠, A♥, Q♥."""
-    player = AlwaysTakingBot('taker')
     player.set_player_index(0)
     player.make_hand([
         Card(Rank.TEN, Suit.SPADES),
@@ -193,84 +180,234 @@ def test_bot_playable_cards_when_teammate_holds(basic_bot: BotPlayer):
 # BotPlayer — play
 # ---------------------------------------------------------------------------
 
-def test_bot_plays_strongest_card_when_team_leads(basic_bot: BotPlayer):
-    cards_played = [Card(Rank.ACE, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)]
-    card = basic_bot.play(player_index_leading=2, trump_suit=Suit.HEARTS, cards_played=cards_played)
-    assert card == Card(Rank.TEN, Suit.SPADES)
-
-
-def test_bot_plays_weakest_card_when_team_does_not_lead(basic_bot: BotPlayer):
-    cards_played = [Card(Rank.ACE, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES), Card(Rank.SEVEN, Suit.SPADES)]
-    card = basic_bot.play(player_index_leading=1, trump_suit=Suit.HEARTS, cards_played=cards_played)
-    assert card == Card(Rank.JACK, Suit.SPADES)
-
-
 def test_bot_played_card_is_removed_from_hand(basic_bot: BotPlayer):
     hand_size_before = len(basic_bot.hand)
-    card = basic_bot.play(player_index_leading=2, trump_suit=Suit.HEARTS, cards_played=[])
+    card = basic_bot.play(player_index_leading=2, trump_suit=Suit.HEARTS, cards_played=[], taker=0)
     basic_bot.remove_card_played(card)
     assert len(basic_bot.hand) == hand_size_before - 1
     assert card not in basic_bot.hand
 
+#starting position
 
-# ---------------------------------------------------------------------------
-# AlwaysTakingBot — playable_cards (same rules as BotPlayer)
-# ---------------------------------------------------------------------------
-
-def test_taker_playable_cards_must_climb_when_trump_led_higher(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.JACK, Suit.HEARTS), Card(Rank.SEVEN, Suit.DIAMONDS)]
-    assert same_elements(
-        taker_bot.playable_cards(cards_played, Suit.HEARTS, 2),
-        [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
+def test_level_one_bot_starts_with_jack_trump_when_teammate_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=0,
+        trump_suit=Suit.SPADES,
+        cards_played=[],
+        taker=2
     )
+    assert card == Card(Rank.JACK, Suit.SPADES)
 
 
-def test_taker_playable_cards_must_climb_when_trump_led_lower(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.EIGHT, Suit.HEARTS)]
-    assert same_elements(
-        taker_bot.playable_cards(cards_played, Suit.HEARTS, 3),
-        [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
+def test_level_one_bot_starts_with_jack_trump_when_opponent_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=0,
+        trump_suit=Suit.SPADES,
+        cards_played=[],
+        taker=1
     )
+    assert card == Card(Rank.JACK, Suit.SPADES)
 
 
-def test_taker_playable_cards_must_climb_when_trump_led_between(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.TEN, Suit.HEARTS)]
-    assert taker_bot.playable_cards(cards_played, Suit.HEARTS, 2) == [Card(Rank.ACE, Suit.HEARTS)]
-
-
-def test_taker_playable_cards_must_cut_when_no_suit_to_follow(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.JACK, Suit.CLUBS)]
-    assert same_elements(
-        taker_bot.playable_cards(cards_played, Suit.HEARTS, 3),
-        [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
+def test_level_one_bot_starts_with_best_trump_if_teammate_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=0,
+        trump_suit=Suit.HEARTS,
+        cards_played=[],
+        taker=2
     )
+    assert card == Card(Rank.ACE, Suit.HEARTS)
 
 
-def test_taker_playable_cards_must_climb_when_cutting(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.EIGHT, Suit.HEARTS)]
-    assert same_elements(
-        taker_bot.playable_cards(cards_played, Suit.HEARTS, 3),
-        [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
+def test_level_one_bot_starts_with_ace_if_no_trump_and_teammate_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=0,
+        trump_suit=Suit.DIAMONDS,
+        cards_played=[],
+        taker=2
     )
+    assert card == Card(Rank.ACE, Suit.HEARTS)
 
 
-def test_taker_playable_cards_cannot_climb_when_cutting(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.HEARTS)]
-    assert same_elements(
-        taker_bot.playable_cards(cards_played, Suit.HEARTS, 3),
-        [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
+def test_level_one_bot_starts_with_ace_if_opponent_took():
+    player = BotPlayer('0')
+    player.set_player_index(0)
+    player.make_hand([Card(Rank.ACE, Suit.HEARTS), Card(Rank.NINE, Suit.DIAMONDS)])
+    card = player.play(
+        player_index_leading=0,
+        trump_suit=Suit.DIAMONDS,
+        cards_played=[],
+        taker=1
     )
+    assert card == Card(Rank.ACE, Suit.HEARTS)
 
 
-def test_taker_playable_cards_any_card_when_leading(taker_bot: AlwaysTakingBot):
-    assert same_elements(taker_bot.playable_cards([], Suit.HEARTS, 0), taker_bot.hand)
+def test_level_one_bot_starts_with_ten_if_opponent_took_and_ace_has_fallen(basic_bot: BotPlayer):
+    basic_bot.save_trick([Card(Rank.ACE, Suit.SPADES)])
+    card = basic_bot.play(
+        player_index_leading=0,
+        trump_suit=Suit.HEARTS,
+        cards_played=[],
+        taker=1
+    )
+    assert card == Card(Rank.TEN, Suit.SPADES)
 
 
-def test_taker_playable_cards_any_card_when_no_trump_in_hand(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.CLUBS)]
-    assert same_elements(taker_bot.playable_cards(cards_played, Suit.CLUBS, 2), taker_bot.hand)
+def test_level_one_bot_starts_with_worst_card_if_no_ten_or_ace(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=0,
+        trump_suit=Suit.HEARTS,
+        cards_played=[],
+        taker=1
+    )
+    assert card == Card(Rank.JACK, Suit.SPADES)
 
 
-def test_taker_playable_cards_any_card_when_cannot_cut(taker_bot: AlwaysTakingBot):
-    cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.CLUBS)]
-    assert same_elements(taker_bot.playable_cards(cards_played, Suit.DIAMONDS, 3), taker_bot.hand)
+#middle position (2nd or 3rd to play)
+
+def test_level_one_bot_always_play_jack_trump(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=2,
+        trump_suit=Suit.SPADES,
+        cards_played=[Card(Rank.SEVEN, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)],
+        taker=3
+    )
+    assert card == Card(Rank.JACK, Suit.SPADES)
+
+
+def test_level_one_bot_plays_worst_card_if_trump_led_and_opponent_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=1,
+        trump_suit=Suit.HEARTS,
+        cards_played=[Card(Rank.NINE, Suit.HEARTS)],
+        taker=1
+    )
+    assert card == Card(Rank.QUEEN, Suit.HEARTS)
+
+
+def test_level_one_bot_cuts_with_best_trump_if_opponent_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=1,
+        trump_suit=Suit.HEARTS,
+        cards_played=[Card(Rank.NINE, Suit.DIAMONDS)],
+        taker=1
+    )
+    assert card == Card(Rank.ACE, Suit.HEARTS)
+
+
+def test_level_one_bot_cuts_with_best_trump_if_teammate_took(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=1,
+        trump_suit=Suit.HEARTS,
+        cards_played=[Card(Rank.NINE, Suit.DIAMONDS)],
+        taker=2
+    )
+    assert card == Card(Rank.ACE, Suit.HEARTS)
+
+
+def test_level_one_bot_keeps_ten_if_ace_not_played(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=1,
+        trump_suit=Suit.CLUBS,
+        cards_played=[Card(Rank.NINE, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)],
+        taker=2
+    )
+    assert card == Card(Rank.JACK, Suit.SPADES)
+
+
+def test_level_one_bot_plays_ten_if_ace_played(basic_bot: BotPlayer):
+    basic_bot.save_trick([Card(Rank.ACE, Suit.SPADES)])
+    card = basic_bot.play(
+        player_index_leading=1,
+        trump_suit=Suit.CLUBS,
+        cards_played=[Card(Rank.NINE, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)],
+        taker=2
+    )
+    assert card == Card(Rank.TEN, Suit.SPADES)
+
+
+#last to play
+
+def test_level_one_bot_wins_trick_if_possible(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=2,
+        trump_suit=Suit.CLUBS,
+        cards_played=[
+            Card(Rank.NINE, Suit.SPADES),
+            Card(Rank.QUEEN, Suit.SPADES),
+            Card(Rank.ACE, Suit.HEARTS)
+        ],
+        taker=2
+    )
+    assert card == Card(Rank.TEN, Suit.SPADES)
+
+
+def test_level_one_bot_plays_best_card_last_if_teammate_leading(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=2,
+        trump_suit=Suit.CLUBS,
+        cards_played=[
+            Card(Rank.TEN, Suit.DIAMONDS),
+            Card(Rank.ACE, Suit.DIAMONDS),
+            Card(Rank.SEVEN, Suit.DIAMONDS)
+        ],
+        taker=2
+    )
+    assert card == Card(Rank.ACE, Suit.HEARTS)    
+
+def test_level_one_bot_plays_worst_card_if_cant_win_and_opponent_leading(basic_bot: BotPlayer):
+    card = basic_bot.play(
+        player_index_leading=1,
+        trump_suit=Suit.CLUBS,
+        cards_played=[
+            Card(Rank.ACE, Suit.SPADES),
+            Card(Rank.QUEEN, Suit.SPADES),
+            Card(Rank.KING, Suit.SPADES)
+        ],
+        taker=2
+    )
+    assert card == Card(Rank.JACK, Suit.SPADES)
+#--------------------------------------------------------------------------------
+# Static method tests
+#--------------------------------------------------------------------------------
+
+def test_player_static_method_one_suit():
+    deck = Deck()
+    hearts = Player.retrieve_cards_from_container(
+        deck._cards,
+        suit = Suit.HEARTS
+    )
+    assert len(hearts) == 8
+    assert sum([True if card.suit == Suit.HEARTS else False for card in hearts]) == 8
+
+def test_player_static_method_multiple_suits():
+    deck = Deck()
+    hearts_spades = Player.retrieve_cards_from_container(
+        deck._cards,
+        suit = [Suit.HEARTS, Suit.SPADES]
+    )
+    assert len(hearts_spades) == 16
+    assert sum([True if (card.suit == Suit.HEARTS or card.suit == Suit.SPADES)
+                else False for card in hearts_spades]) == 16
+
+def test_player_static_method_one_rank():
+    deck = Deck()
+    aces = Player.retrieve_cards_from_container(
+        deck._cards,
+        return_type=set,
+        rank = Rank.ACE
+    )
+    assert len(aces) == 4
+    assert sum([True if card.rank == Rank.ACE else False for card in aces]) == 4
+    assert isinstance(aces, set)
+
+def test_player_static_method_one_suit_one_rank():
+    deck = Deck()
+    heart_ten = Player.retrieve_cards_from_container(
+        deck._cards,
+        suit = Suit.HEARTS,
+        rank=Rank.TEN
+    )
+    assert len(heart_ten) == 1
+    assert sum([True if card.suit == Suit.HEARTS and card.rank == Rank.TEN
+                 else False for card in heart_ten]) == 1
