@@ -372,8 +372,12 @@ class BotPlayer(Player):
         elif len(cards_played) == 3:    #bot ends the trick
             best_card = cards_available_to_play[0]
             #our best card makes us win the trick
-            if best_card.strength(trump_suit) > max([card.strength(trump_suit) 
-                                                     for card in cards_played]):
+            if best_card.strength(trump_suit) > max([
+                card.strength(trump_suit) for card in cards_played
+                if card.suit in {trump_suit, cards_played[0].suit}
+                ]): 
+                #condition avoids considering card with better overall strength but 
+                #that can not win trick
                 return best_card
             #our teammate is leading
             elif self._is_this_player_in_my_team(player_index_leading):
@@ -396,11 +400,13 @@ class BotPlayer(Player):
             
             #unless it'a ten and the ace of same color has not been played,
             #play best card available
-            if best_card.strength(trump_suit) > max([card.strength(trump_suit) 
-                                                    for card in cards_played]):
+            if best_card.strength(trump_suit) > max([
+                card.strength(trump_suit) for card in cards_played
+                if card.suit in {trump_suit, cards_played[0].suit}
+                ]): 
                 if best_card.rank == Rank.TEN and Card(Rank.ACE, best_card.suit) in non_trump_aces_played:
-                    return cards_available_to_play[-1]
-                return best_card
+                    return best_card
+                return cards_available_to_play[-1]
             
             return cards_available_to_play[-1]
 
