@@ -6,8 +6,22 @@ is a bot or a human, following the polymorphism pattern.
 """
 
 from .card import Card, Suit, Rank
-from ..utils.utils import argmin, argmax
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+import random
+
+
+@dataclass
+class TrickState:
+    hands: dict[int, list[Card]]      # player_index -> cards
+    cards_played: list[Card]           # current trick
+    starting_player: int
+    current_player: int
+    leading_player: int
+    trump_suit: Suit
+    taker: int
+    tricks_remaining: int
+    points: dict[int, int]            # accumulated this turn
 
 
 class Player(ABC):
@@ -228,40 +242,12 @@ class Player(ABC):
 
         return return_type(result)
 
-class BotPlayer(Player):
-    """A bot player with a basic strategy.
 
-    Bidding strategy: takes the contract if the hand scores more than 50 points
-    at the proposed trump suit. In round 2, takes the best available suit if it
-    scores more than 50 points.
-
-    Playing strategy: plays the strongest available card when the team is
-    winning the trick, the weakest otherwise.
-
-    Attributes:
-        username: Display name of the player.
-        index: Position in the current game (0 to 3). Assigned at game start
-            via set_player_index() and reset to None after the game ends.
-        hand: The player's current cards.
-        level: Bot's level (between 1-3)
-    """
-
-    def __init__(self, username: str, level: int = 1):
-        """Initializes a BotPlayer.
-
-        Args:
-            username: Display name of the bot player.
-        """
+class MemoryPlayer(Player):
+    def __init__(self, username):
         super().__init__(username)
-        self._check_level(level)
         self._cards_played_in_turn = set()
-    
-    def _check_level(self, level):
-        if level in (1, 2, 3):
-            self._level = level
-        else:
-            raise ValueError("Level must be between 1-3")
-
+        
     def decide_bid(self, trump_card: Card, round: int) -> tuple:
         """Takes the contract if the hand is worth more than 50 points.
 
@@ -295,45 +281,16 @@ class BotPlayer(Player):
     def save_trick(self, cards_played: list[Card]):
         self._cards_played_in_turn = self._cards_played_in_turn.union(set(cards_played))
 
-    def play(
-            self,
-            player_index_leading: int,
-            trump_suit: Suit,
-            cards_played: list[Card],
-            taker: int
-        ) -> Card:
-        """Plays the strongest card if the team leads, the weakest otherwise.
-
-        Args:
-            player_index_leading: Index of the player currently winning the trick.
-            trump_suit: The current trump suit.
-            cards_played: Cards already played in the current trick.
-
-        Returns:
-            The selected card to play.
-        """
-        if self._level == 1:
-            return self.play_level_one(
-                player_index_leading,
-                trump_suit,
-                cards_played,
-                taker
-            )
-    
     def play_level_one(
             self,
             player_index_leading: int,
             trump_suit: Suit,
             cards_played: list[Card],
-            taker: int
+            taker: int,
+            non_trump_aces_played: list[Card],
+            cards_available_to_play: list[Card]
         ) -> Card:
-        non_trump_aces_played = self.retrieve_cards_from_container(
-            self._cards_played_in_turn,
-            return_type=set,
-            suit=[suit for suit in Suit if suit != trump_suit],
-            rank=Rank.ACE
-        )
-        cards_available_to_play = self.playable_cards(cards_played, trump_suit, player_index_leading)
+
         cards_available_to_play.sort(key=lambda card: card.strength(trump_suit), reverse=True)
 
         #Bot Strategy
@@ -411,8 +368,140 @@ class BotPlayer(Player):
             return cards_available_to_play[-1]
 
     def reset_memory(self):
+        self._cards_played_in_turn = set()    
+
+
+class BotPlayer(MemoryPlayer):
+    """A bot player with a basic strategy.
+
+    Bidding strategy: takes the contract if the hand scores more than 50 points
+    at the proposed trump suit. In round 2, takes the best available suit if it
+    scores more than 50 points.
+
+    Playing strategy: plays the strongest available card when the team is
+    winning the trick, the weakest otherwise.
+
+    Attributes:
+        username: Display name of the player.
+        index: Position in the current game (0 to 3). Assigned at game start
+            via set_player_index() and reset to None after the game ends.
+        hand: The player's current cards.
+        level: Bot's level (between 1-3)
+    """
+
+    def __init__(self, username: str, level: int = 1):
+        """Initializes a BotPlayer.
+
+        Args:
+            username: Display name of the bot player.
+        """
+        super().__init__(username)
+        self._check_level(level)
+    
+    def _check_level(self, level):
+        if level in (1, 2, 3):
+            self._level = level
+        else:
+            raise ValueError("Level must be between 1-3")
+
+    def play(
+            self,
+            player_index_leading: int,
+            trump_suit: Suit,
+            cards_played: list[Card],
+            taker: int
+        ) -> Card:
+        """Plays the strongest card if the team leads, the weakest otherwise.
+
+        Args:
+            player_index_leading: Index of the player currently winning the trick.
+            trump_suit: The current trump suit.
+            cards_played: Cards already played in the current trick.
+
+        Returns:
+            The selected card to play.
+        """
+        
+        if self._level == 1:
+            non_trump_aces_played = self.retrieve_cards_from_container(
+                self._cards_played_in_turn,
+                return_type=set,
+                suit=[suit for suit in Suit if suit != trump_suit],
+                rank=Rank.ACE
+            )
+            cards_available_to_play = self.playable_cards(
+                cards_played,
+                trump_suit,
+                player_index_leading
+            )
+            return self.play_level_one(
+                player_index_leading,
+                trump_suit,
+                cards_played,
+                taker,
+                non_trump_aces_played,
+                cards_available_to_play
+            )
+
+
+class MCTSBotPlayer(MemoryPlayer):
+    ALL_CARDS = [Card(rank, suit) for rank in Rank for suit in Suit]
+
+    def __init__(
+            self,
+            username,
+            n_simulations:int = 500,
+            heuristic_play_prob: float = 0.8
+            ):
+        super().__init__(username)
+        self._n_simulations = n_simulations
+        self._heuristic_play_prob = heuristic_play_prob
         self._cards_played_in_turn = set()
 
+    def play(
+            self,
+            trick_state: TrickState
+        ) -> Card:
+        pass
+
+    def _determinize(self, trick_state: TrickState):
+        """distribute all remaining cards to other players"""
+        hands = {}
+        excluded = self._cards_played_in_turn | set(self.hand) | set(trick_state.cards_played)
+        remaining_cards = [card for card in self.ALL_CARDS if card not in excluded]
+        random.shuffle(remaining_cards)
+        n_cards_to_distribute = len(self.hand)
+        n_cards_played = len(trick_state.cards_played)
+        distribute_one_less = (n_cards_played == 3)
+        next_card_index = 0
+        for k in range(1, 4):
+            #for players that have already played, distriute one card less
+            player_index = (self.index + k) % 4
+            end = next_card_index + n_cards_to_distribute - int(distribute_one_less)
+            hands[player_index] = remaining_cards[next_card_index : end]
+            next_card_index = end
+            n_cards_played += 1
+            distribute_one_less = (n_cards_played == 3)
+
+        return hands
+
+    def _simulate(self, trick_state: TrickState, candidate_card: Card):
+        pass
+
+    def _mixed_strategy(self):
+        """
+        Choose the card to play for other players in the simulation.
+        Mixed strategy because it chooses randomly or using the
+        heuristics definied in the MemomyPlayer class. Used to add
+        some novelty in the simulation.
+        """
+        if random.random() < self._heuristic_play_prob:
+            #use heuristics
+            pass
+        
+        else:
+            #use random
+            pass
 
 class HumanPlayer(Player):
     """A human player whose decisions are provided by the communication layer.
