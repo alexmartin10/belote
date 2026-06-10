@@ -58,6 +58,8 @@ class Trick:
 
         player = self._players[player_index]
         if card not in player.playable_cards(
+            player.hand,
+            player.index,
             self.cards_played,
             self._trump_suit,
             self.leading_player
@@ -65,7 +67,7 @@ class Trick:
             raise ValueError(
                 f"Can't play this card: player {player_index} played {card}, "
                 f"but playable cards were {player.playable_cards(
-                    self.cards_played, self._trump_suit, self.leading_player
+                    player.hand, self.cards_played, self._trump_suit, self.leading_player
                 )}"
             )
 

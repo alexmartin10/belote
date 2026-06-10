@@ -81,8 +81,9 @@ class Player(ABC):
             self.hand.sort(key=lambda card: card.suit.value)
             self.hand.sort(key=lambda card: card.suit != trump_suit)
 
-    def playable_cards(self, cards_played: list[Card], trump_suit: Suit, 
-                       player_index_leading: int) -> list[Card]:
+    @staticmethod
+    def playable_cards(player_hand: list[Card], player_index: int, cards_played: list[Card], 
+                       trump_suit: Suit, player_index_leading: int) -> list[Card]:
         """Returns the list of cards the player is legally allowed to play.
 
         Enforces Belote suit-following, cutting, and trump-climbing rules:
@@ -102,38 +103,39 @@ class Player(ABC):
             A list of legally playable cards.
         """
         if cards_played == []:
-            return self.hand
+            return player_hand
 
         first_card_played = cards_played[0]
         suit_to_follow = first_card_played.suit
 
         if suit_to_follow == trump_suit:
-            return self._playable_cards_trump_suit(cards_played, trump_suit)
+            return Player._playable_cards_trump_suit(player_hand, cards_played, trump_suit)
 
-        cards_of_suit_to_follow_in_hand = self.retrieve_cards_from_container(
-            self.hand,
+        cards_of_suit_to_follow_in_hand = Player.retrieve_cards_from_container(
+            player_hand,
             return_type=list,
             suit=suit_to_follow
         )
         if len(cards_of_suit_to_follow_in_hand) > 0:
             return cards_of_suit_to_follow_in_hand
         
-        if self._is_this_player_in_my_team(player_index_leading):
+        if Player._are_these_players_in_same_team(player_index, player_index_leading):
         #if we have no card the same color of the first card played but 
         #our mate is leading, we can play any card we want
-            return self.hand
+            return player_hand
 
-        trump_cards_in_hand = self.retrieve_cards_from_container(
-            self.hand,
+        trump_cards_in_hand = Player.retrieve_cards_from_container(
+            player_hand,
             return_type=list,
             suit=trump_suit
         )
         if len(trump_cards_in_hand) > 0:
-            return self._playable_cards_trump_suit(cards_played, trump_suit)
+            return Player._playable_cards_trump_suit(player_hand, cards_played, trump_suit)
 
-        return self.hand
+        return player_hand
     
-    def _is_this_player_in_my_team(self, player_index: int) -> bool:
+    @staticmethod
+    def _are_these_players_in_same_team(index1: int, index2: int) -> bool:
         """Checks whether the given player is on the same team.
 
         Teams are (0, 2) and (1, 3).
@@ -144,9 +146,14 @@ class Player(ABC):
         Returns:
             True if the leader is a teammate, False otherwise.
         """
-        return (player_index % 2) == (self.index % 2)
+        return (index1 % 2) == (index2 % 2)
 
-    def _playable_cards_trump_suit(self, cards_played: list[Card], trump_suit: Suit) -> list[Card]:
+    @staticmethod
+    def _playable_cards_trump_suit(
+            player_hand: list[Card],
+            cards_played: list[Card], 
+            trump_suit: Suit
+            ) -> list[Card]:
         """Returns legal trump cards to play, enforcing the climbing rule.
 
         When trump is led or the player is cutting, the player must play
@@ -161,13 +168,13 @@ class Player(ABC):
         Returns:
             A list of legally playable cards.
         """
-        trump_cards_in_hand = self.retrieve_cards_from_container(
-            self.hand,
+        trump_cards_in_hand = Player.retrieve_cards_from_container(
+            player_hand,
             return_type=list,
             suit=trump_suit
         )
         if len(trump_cards_in_hand) == 0:
-            return self.hand
+            return player_hand
 
         cards_played_trump_suit = [
             card for card in cards_played if card.suit == trump_suit
@@ -306,7 +313,8 @@ class MemoryPlayer(Player):
             #If bot has a trump card, it will be first because of the strenght bonus
             best_card = cards_available_to_play[0]
             #If the taker is in bot's team, play highest trump card if possible
-            if best_card.suit == trump_suit and self._is_this_player_in_my_team(taker):
+            if (best_card.suit == trump_suit and 
+                self._are_these_players_in_same_team(self.index, taker)):
                 return best_card
             #taker not in bot's team : forget trumps
             cards_available_to_play = self.retrieve_cards_from_container(
@@ -314,7 +322,7 @@ class MemoryPlayer(Player):
                 suit=[suit for suit in Suit if suit != trump_suit],
             )
             if not cards_available_to_play: #bot has all the trumps
-                return self.playable_cards(cards_played, trump_suit, player_index_leading)[0]
+                return self.playable_cards(self.hand, self.index, cards_played, trump_suit, player_index_leading)[0]
             best_card = cards_available_to_play[0]
             #bot has no trump card or taker not in his team, check if he has Ace
             if best_card.rank == Rank.ACE:
@@ -337,7 +345,7 @@ class MemoryPlayer(Player):
                 #that can not win trick
                 return best_card
             #our teammate is leading
-            elif self._is_this_player_in_my_team(player_index_leading):
+            elif self._are_these_players_in_same_team(self.index, player_index_leading):
                 return best_card
             else:
                 return cards_available_to_play[-1]
@@ -346,7 +354,7 @@ class MemoryPlayer(Player):
             best_card = cards_available_to_play[0]
             #first card is trump, play best if taker is in our team, else worst
             if cards_played[0].suit == trump_suit:
-                if self._is_this_player_in_my_team(taker):
+                if self._are_these_players_in_same_team(self.index, taker):
                     return best_card
                 else:
                     return cards_available_to_play[-1]
@@ -430,6 +438,8 @@ class BotPlayer(MemoryPlayer):
                 rank=Rank.ACE
             )
             cards_available_to_play = self.playable_cards(
+                self.hand,
+                self.index,
                 cards_played,
                 trump_suit,
                 player_index_leading
@@ -579,4 +589,4 @@ class AlwaysTakingBot(Player):
         Returns:
             The first card in the list of playable cards.
         """
-        return self.playable_cards(cards_played, trump_suit, player_index_leading)[0]
+        return self.playable_cards(self.hand, self.index, cards_played, trump_suit, player_index_leading)[0]

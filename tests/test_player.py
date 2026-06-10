@@ -107,7 +107,7 @@ def test_bot_takes_in_round_2():
 def test_bot_playable_cards_must_climb_when_trump_led_higher(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.HEARTS), Card(Rank.SEVEN, Suit.DIAMONDS)]
     assert same_elements(
-        basic_bot.playable_cards(cards_played, Suit.HEARTS, 2),
+        basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 2),
         [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)],
     )
 
@@ -115,20 +115,20 @@ def test_bot_playable_cards_must_climb_when_trump_led_higher(basic_bot: BotPlaye
 def test_bot_playable_cards_must_climb_when_trump_led_lower(basic_bot: BotPlayer):
     cards_played = [Card(Rank.EIGHT, Suit.HEARTS)]
     assert same_elements(
-        basic_bot.playable_cards(cards_played, Suit.HEARTS, 3),
+        basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 3),
         [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
     )
 
 
 def test_bot_playable_cards_must_climb_when_trump_led_between(basic_bot: BotPlayer):
     cards_played = [Card(Rank.TEN, Suit.HEARTS)]
-    assert basic_bot.playable_cards(cards_played, Suit.HEARTS, 3) == [Card(Rank.ACE, Suit.HEARTS)]
+    assert basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 3) == [Card(Rank.ACE, Suit.HEARTS)]
 
 
 def test_bot_playable_cards_must_cut_when_no_suit_to_follow(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.CLUBS)]
     assert same_elements(
-        basic_bot.playable_cards(cards_played, Suit.HEARTS, 3),
+        basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 3),
         [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
     )
 
@@ -136,7 +136,7 @@ def test_bot_playable_cards_must_cut_when_no_suit_to_follow(basic_bot: BotPlayer
 def test_bot_playable_cards_must_climb_when_cutting(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.EIGHT, Suit.HEARTS)]
     assert same_elements(
-        basic_bot.playable_cards(cards_played, Suit.HEARTS, 3),
+        basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 3),
         [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
     )
 
@@ -144,36 +144,36 @@ def test_bot_playable_cards_must_climb_when_cutting(basic_bot: BotPlayer):
 def test_bot_playable_cards_cannot_climb_when_cutting(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.HEARTS)]
     assert same_elements(
-        basic_bot.playable_cards(cards_played, Suit.HEARTS, 3),
+        basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 3),
         [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.ACE, Suit.HEARTS)]
     )
 
 
 def test_bot_playable_cards_any_card_when_leading(basic_bot: BotPlayer):
-    assert same_elements(basic_bot.playable_cards([], Suit.HEARTS, 0), basic_bot.hand)
+    assert same_elements(basic_bot.playable_cards(basic_bot.hand, basic_bot.index, [], Suit.HEARTS, 0), basic_bot.hand)
 
 
 def test_bot_playable_cards_any_trump_when_cannot_climb(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.HEARTS), Card(Rank.NINE, Suit.HEARTS)]
     assert same_elements(
-        basic_bot.playable_cards(cards_played, Suit.HEARTS, 2),
+        basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 2),
         [Card(Rank.ACE, Suit.HEARTS), Card(Rank.QUEEN, Suit.HEARTS)]
     )
 
 
 def test_bot_playable_cards_any_card_when_no_trump_in_hand(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.CLUBS)]
-    assert same_elements(basic_bot.playable_cards(cards_played, Suit.CLUBS, 2), basic_bot.hand)
+    assert same_elements(basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.CLUBS, 2), basic_bot.hand)
 
 
 def test_bot_playable_cards_any_card_when_cannot_cut(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.CLUBS)]
-    assert same_elements(basic_bot.playable_cards(cards_played, Suit.DIAMONDS, 2), basic_bot.hand)
+    assert same_elements(basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.DIAMONDS, 2), basic_bot.hand)
 
 
 def test_bot_playable_cards_when_teammate_holds(basic_bot: BotPlayer):
     cards_played = [Card(Rank.JACK, Suit.CLUBS), Card(Rank.NINE, Suit.CLUBS)]
-    assert same_elements(basic_bot.playable_cards(cards_played, Suit.HEARTS, 2), basic_bot.hand)
+    assert same_elements(basic_bot.playable_cards(basic_bot.hand, basic_bot.index, cards_played, Suit.HEARTS, 2), basic_bot.hand)
 
 
 # ---------------------------------------------------------------------------
