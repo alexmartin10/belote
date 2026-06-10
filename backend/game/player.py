@@ -288,15 +288,17 @@ class MemoryPlayer(Player):
     def save_trick(self, cards_played: list[Card]):
         self._cards_played_in_turn = self._cards_played_in_turn.union(set(cards_played))
 
+    @staticmethod
     def play_level_one(
-            self,
-            player_index_leading: int,
-            trump_suit: Suit,
-            cards_played: list[Card],
-            taker: int,
-            non_trump_aces_played: list[Card],
-            cards_available_to_play: list[Card]
-        ) -> Card:
+        player_hand: list[Card],
+        player_index: int,
+        player_index_leading: int,
+        trump_suit: Suit,
+        cards_played: list[Card],
+        taker: int,
+        non_trump_aces_played: list[Card],
+        cards_available_to_play: list[Card]
+    ) -> Card:
 
         cards_available_to_play.sort(key=lambda card: card.strength(trump_suit), reverse=True)
 
@@ -314,15 +316,15 @@ class MemoryPlayer(Player):
             best_card = cards_available_to_play[0]
             #If the taker is in bot's team, play highest trump card if possible
             if (best_card.suit == trump_suit and 
-                self._are_these_players_in_same_team(self.index, taker)):
+                Player._are_these_players_in_same_team(player_index, taker)):
                 return best_card
             #taker not in bot's team : forget trumps
-            cards_available_to_play = self.retrieve_cards_from_container(
+            cards_available_to_play = Player.retrieve_cards_from_container(
                 cards_available_to_play,
                 suit=[suit for suit in Suit if suit != trump_suit],
             )
             if not cards_available_to_play: #bot has all the trumps
-                return self.playable_cards(self.hand, self.index, cards_played, trump_suit, player_index_leading)[0]
+                return Player.playable_cards(player_hand, player_index, cards_played, trump_suit, player_index_leading)[0]
             best_card = cards_available_to_play[0]
             #bot has no trump card or taker not in his team, check if he has Ace
             if best_card.rank == Rank.ACE:
@@ -345,7 +347,7 @@ class MemoryPlayer(Player):
                 #that can not win trick
                 return best_card
             #our teammate is leading
-            elif self._are_these_players_in_same_team(self.index, player_index_leading):
+            elif Player._are_these_players_in_same_team(player_index, player_index_leading):
                 return best_card
             else:
                 return cards_available_to_play[-1]
@@ -354,7 +356,7 @@ class MemoryPlayer(Player):
             best_card = cards_available_to_play[0]
             #first card is trump, play best if taker is in our team, else worst
             if cards_played[0].suit == trump_suit:
-                if self._are_these_players_in_same_team(self.index, taker):
+                if Player._are_these_players_in_same_team(player_index, taker):
                     return best_card
                 else:
                     return cards_available_to_play[-1]
@@ -445,6 +447,8 @@ class BotPlayer(MemoryPlayer):
                 player_index_leading
             )
             return self.play_level_one(
+                self.hand,
+                self.index,
                 player_index_leading,
                 trump_suit,
                 cards_played,

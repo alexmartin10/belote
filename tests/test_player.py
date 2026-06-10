@@ -182,7 +182,7 @@ def test_bot_playable_cards_when_teammate_holds(basic_bot: BotPlayer):
 
 def test_bot_played_card_is_removed_from_hand(basic_bot: BotPlayer):
     hand_size_before = len(basic_bot.hand)
-    card = basic_bot.play(player_index_leading=2, trump_suit=Suit.HEARTS, cards_played=[], taker=0)
+    card = basic_bot.play( player_index_leading=2, trump_suit=Suit.HEARTS, cards_played=[], taker=0)
     basic_bot.remove_card_played(card)
     assert len(basic_bot.hand) == hand_size_before - 1
     assert card not in basic_bot.hand
@@ -190,7 +190,7 @@ def test_bot_played_card_is_removed_from_hand(basic_bot: BotPlayer):
 #starting position
 
 def test_level_one_bot_starts_with_jack_trump_when_teammate_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=0,
         trump_suit=Suit.SPADES,
         cards_played=[],
@@ -200,7 +200,7 @@ def test_level_one_bot_starts_with_jack_trump_when_teammate_took(basic_bot: BotP
 
 
 def test_level_one_bot_starts_with_jack_trump_when_opponent_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=0,
         trump_suit=Suit.SPADES,
         cards_played=[],
@@ -210,7 +210,7 @@ def test_level_one_bot_starts_with_jack_trump_when_opponent_took(basic_bot: BotP
 
 
 def test_level_one_bot_starts_with_best_trump_if_teammate_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=0,
         trump_suit=Suit.HEARTS,
         cards_played=[],
@@ -220,7 +220,7 @@ def test_level_one_bot_starts_with_best_trump_if_teammate_took(basic_bot: BotPla
 
 
 def test_level_one_bot_starts_with_ace_if_no_trump_and_teammate_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=0,
         trump_suit=Suit.DIAMONDS,
         cards_played=[],
@@ -244,7 +244,7 @@ def test_level_one_bot_starts_with_ace_if_opponent_took():
 
 def test_level_one_bot_starts_with_ten_if_opponent_took_and_ace_has_fallen(basic_bot: BotPlayer):
     basic_bot.save_trick([Card(Rank.ACE, Suit.SPADES)])
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=0,
         trump_suit=Suit.HEARTS,
         cards_played=[],
@@ -254,7 +254,7 @@ def test_level_one_bot_starts_with_ten_if_opponent_took_and_ace_has_fallen(basic
 
 
 def test_level_one_bot_starts_with_worst_card_if_no_ten_or_ace(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=0,
         trump_suit=Suit.HEARTS,
         cards_played=[],
@@ -266,7 +266,7 @@ def test_level_one_bot_starts_with_worst_card_if_no_ten_or_ace(basic_bot: BotPla
 #middle position (2nd or 3rd to play)
 
 def test_level_one_bot_always_play_jack_trump(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=2,
         trump_suit=Suit.SPADES,
         cards_played=[Card(Rank.SEVEN, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)],
@@ -276,7 +276,7 @@ def test_level_one_bot_always_play_jack_trump(basic_bot: BotPlayer):
 
 
 def test_level_one_bot_plays_worst_card_if_trump_led_and_opponent_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=1,
         trump_suit=Suit.HEARTS,
         cards_played=[Card(Rank.NINE, Suit.HEARTS)],
@@ -286,7 +286,7 @@ def test_level_one_bot_plays_worst_card_if_trump_led_and_opponent_took(basic_bot
 
 
 def test_level_one_bot_cuts_with_best_trump_if_opponent_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=1,
         trump_suit=Suit.HEARTS,
         cards_played=[Card(Rank.NINE, Suit.DIAMONDS)],
@@ -296,7 +296,7 @@ def test_level_one_bot_cuts_with_best_trump_if_opponent_took(basic_bot: BotPlaye
 
 
 def test_level_one_bot_cuts_with_best_trump_if_teammate_took(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=1,
         trump_suit=Suit.HEARTS,
         cards_played=[Card(Rank.NINE, Suit.DIAMONDS)],
@@ -306,7 +306,7 @@ def test_level_one_bot_cuts_with_best_trump_if_teammate_took(basic_bot: BotPlaye
 
 
 def test_level_one_bot_keeps_ten_if_ace_not_played(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=1,
         trump_suit=Suit.CLUBS,
         cards_played=[Card(Rank.NINE, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)],
@@ -317,7 +317,7 @@ def test_level_one_bot_keeps_ten_if_ace_not_played(basic_bot: BotPlayer):
 
 def test_level_one_bot_plays_ten_if_ace_played(basic_bot: BotPlayer):
     basic_bot.save_trick([Card(Rank.ACE, Suit.SPADES)])
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=1,
         trump_suit=Suit.CLUBS,
         cards_played=[Card(Rank.NINE, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES)],
@@ -329,7 +329,7 @@ def test_level_one_bot_plays_ten_if_ace_played(basic_bot: BotPlayer):
 #last to play
 
 def test_level_one_bot_wins_trick_if_possible(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=2,
         trump_suit=Suit.CLUBS,
         cards_played=[
@@ -343,7 +343,7 @@ def test_level_one_bot_wins_trick_if_possible(basic_bot: BotPlayer):
 
 
 def test_level_one_bot_plays_best_card_last_if_teammate_leading(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=2,
         trump_suit=Suit.CLUBS,
         cards_played=[
@@ -356,7 +356,7 @@ def test_level_one_bot_plays_best_card_last_if_teammate_leading(basic_bot: BotPl
     assert card == Card(Rank.ACE, Suit.HEARTS)    
 
 def test_level_one_bot_plays_worst_card_if_cant_win_and_opponent_leading(basic_bot: BotPlayer):
-    card = basic_bot.play(
+    card = basic_bot.play( 
         player_index_leading=1,
         trump_suit=Suit.CLUBS,
         cards_played=[
