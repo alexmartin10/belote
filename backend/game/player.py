@@ -324,7 +324,8 @@ class MemoryPlayer(Player):
                 suit=[suit for suit in Suit if suit != trump_suit],
             )
             if not cards_available_to_play: #bot has all the trumps
-                return Player.playable_cards(player_hand, player_index, cards_played, trump_suit, player_index_leading)[0]
+                return player_hand[0]
+            
             best_card = cards_available_to_play[0]
             #bot has no trump card or taker not in his team, check if he has Ace
             if best_card.rank == Rank.ACE:
