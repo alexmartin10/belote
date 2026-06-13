@@ -9,6 +9,7 @@ from .card import Card, Suit, Rank
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import random
+import time
 
 
 @dataclass
@@ -297,9 +298,15 @@ class MemoryPlayer(Player):
         cards_played: list[Card],
         taker: int,
         non_trump_aces_played: list[Card],
-        cards_available_to_play: list[Card]
     ) -> Card:
 
+        cards_available_to_play = Player.playable_cards(
+            player_hand,
+            player_index,
+            cards_played,
+            trump_suit,
+            player_index_leading
+        )
         cards_available_to_play.sort(key=lambda card: card.strength(trump_suit), reverse=True)
 
         #Bot Strategy
@@ -440,13 +447,7 @@ class BotPlayer(MemoryPlayer):
                 suit=[suit for suit in Suit if suit != trump_suit],
                 rank=Rank.ACE
             )
-            cards_available_to_play = self.playable_cards(
-                self.hand,
-                self.index,
-                cards_played,
-                trump_suit,
-                player_index_leading
-            )
+
             return self.play_level_one(
                 self.hand,
                 self.index,
@@ -455,7 +456,6 @@ class BotPlayer(MemoryPlayer):
                 cards_played,
                 taker,
                 non_trump_aces_played,
-                cards_available_to_play
             )
 
 
@@ -475,9 +475,21 @@ class MCTSBotPlayer(MemoryPlayer):
 
     def play(
             self,
-            trick_state: TrickState
+            trick_state: TrickState,
+            time_budget: int = 3
         ) -> Card:
-        pass
+
+        candidate_cards = Player.playable_cards(
+            self.hand,
+            self.index,
+            trick_state.cards_played,
+            trick_state.trump_suit,
+            trick_state.leading_player
+        )
+        if len(candidate_cards) == 1:
+            return candidate_cards[0]
+
+
 
     def _determinize(self, trick_state: TrickState):
         """distribute all remaining cards to other players"""
@@ -503,20 +515,51 @@ class MCTSBotPlayer(MemoryPlayer):
     def _simulate(self, trick_state: TrickState, candidate_card: Card):
         pass
 
-    def _mixed_strategy(self):
+    def _mixed_strategy(
+            self,
+            player_index,
+            trick_state: TrickState
+        ):
         """
         Choose the card to play for other players in the simulation.
         Mixed strategy because it chooses randomly or using the
         heuristics definied in the MemomyPlayer class. Used to add
         some novelty in the simulation.
+
+        Args: possible_cards : list of cards that are legal to play
+            for the current player
+            trick_state : contains all arguments to give to heuristic
         """
+        player_hand = trick_state.hands[player_index]
+
         if random.random() < self._heuristic_play_prob:
             #use heuristics
-            pass
+            non_trump_aces_played = self.retrieve_cards_from_container(
+                self._cards_played_in_turn,
+                return_type=set,
+                suit=[suit for suit in Suit if suit != trick_state.trump_suit],
+                rank=Rank.ACE
+            )
+            self.play_level_one(
+                player_hand,
+                player_index,
+                trick_state.leading_player,
+                trick_state.trump_suit,
+                trick_state.cards_played,
+                trick_state.taker,
+                non_trump_aces_played
+            )
         
         else:
-            #use random
-            pass
+            #choose randomly
+            possible_cards = Player.playable_cards(
+                player_hand,
+                player_index,
+                trick_state.cards_played,
+                trick_state.trump_suit,
+                trick_state.leading_player
+            )
+            return random.choice(possible_cards)
 
 class HumanPlayer(Player):
     """A human player whose decisions are provided by the communication layer.
