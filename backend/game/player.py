@@ -7,22 +7,6 @@ is a bot or a human, following the polymorphism pattern.
 
 from .card import Card, Suit, Rank
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-import random
-import time
-
-
-@dataclass
-class TrickState:
-    hands: dict[int, list[Card]]      # player_index -> cards
-    cards_played: list[Card]           # current trick
-    starting_player: int
-    current_player: int
-    leading_player: int
-    trump_suit: Suit
-    taker: int
-    tricks_remaining: int
-    points: dict[int, int]            # accumulated this turn
 
 
 class Player(ABC):
@@ -458,108 +442,6 @@ class BotPlayer(MemoryPlayer):
                 non_trump_aces_played,
             )
 
-
-class MCTSBotPlayer(MemoryPlayer):
-    ALL_CARDS = [Card(rank, suit) for rank in Rank for suit in Suit]
-
-    def __init__(
-            self,
-            username,
-            n_simulations:int = 500,
-            heuristic_play_prob: float = 0.8
-            ):
-        super().__init__(username)
-        self._n_simulations = n_simulations
-        self._heuristic_play_prob = heuristic_play_prob
-        self._cards_played_in_turn = set()
-
-    def play(
-            self,
-            trick_state: TrickState,
-            time_budget: int = 3
-        ) -> Card:
-
-        candidate_cards = Player.playable_cards(
-            self.hand,
-            self.index,
-            trick_state.cards_played,
-            trick_state.trump_suit,
-            trick_state.leading_player
-        )
-        if len(candidate_cards) == 1:
-            return candidate_cards[0]
-
-
-
-    def _determinize(self, trick_state: TrickState):
-        """distribute all remaining cards to other players"""
-        hands = {}
-        excluded = self._cards_played_in_turn | set(self.hand) | set(trick_state.cards_played)
-        remaining_cards = [card for card in self.ALL_CARDS if card not in excluded]
-        random.shuffle(remaining_cards)
-        n_cards_to_distribute = len(self.hand)
-        n_cards_played = len(trick_state.cards_played)
-        distribute_one_less = (n_cards_played == 3)
-        next_card_index = 0
-        for k in range(1, 4):
-            #for players that have already played, distriute one card less
-            player_index = (self.index + k) % 4
-            end = next_card_index + n_cards_to_distribute - int(distribute_one_less)
-            hands[player_index] = remaining_cards[next_card_index : end]
-            next_card_index = end
-            n_cards_played += 1
-            distribute_one_less = (n_cards_played == 3)
-
-        return hands
-
-    def _simulate(self, trick_state: TrickState, candidate_card: Card):
-        pass
-
-    def _mixed_strategy(
-            self,
-            player_index,
-            trick_state: TrickState
-        ):
-        """
-        Choose the card to play for other players in the simulation.
-        Mixed strategy because it chooses randomly or using the
-        heuristics definied in the MemomyPlayer class. Used to add
-        some novelty in the simulation.
-
-        Args: possible_cards : list of cards that are legal to play
-            for the current player
-            trick_state : contains all arguments to give to heuristic
-        """
-        player_hand = trick_state.hands[player_index]
-
-        if random.random() < self._heuristic_play_prob:
-            #use heuristics
-            non_trump_aces_played = self.retrieve_cards_from_container(
-                self._cards_played_in_turn,
-                return_type=set,
-                suit=[suit for suit in Suit if suit != trick_state.trump_suit],
-                rank=Rank.ACE
-            )
-            self.play_level_one(
-                player_hand,
-                player_index,
-                trick_state.leading_player,
-                trick_state.trump_suit,
-                trick_state.cards_played,
-                trick_state.taker,
-                non_trump_aces_played
-            )
-        
-        else:
-            #choose randomly
-            possible_cards = Player.playable_cards(
-                player_hand,
-                player_index,
-                trick_state.cards_played,
-                trick_state.trump_suit,
-                trick_state.leading_player
-            )
-            return random.choice(possible_cards)
 
 class HumanPlayer(Player):
     """A human player whose decisions are provided by the communication layer.
