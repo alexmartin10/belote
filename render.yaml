@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: belote-online
+    runtime: docker
+    plan: free
+    healthCheckPath: /health

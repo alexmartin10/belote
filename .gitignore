@@ -1,9 +1,30 @@
-#Python
-*__pycache__/
-*.pyc
-.env
-*.egg-info/
-*pytest_cache
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-#frontend
-frontend/.vite
+# uv / virtual environments
+.venv/
+venv/
+
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Archives
+*.zip

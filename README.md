@@ -1,96 +1,133 @@
 # 🃏 Belote Online
 
-A French card game (Belote) built in Python, designed to be played online in real time via a web interface.
+A personal backend project implementing the French card game **Belote** in Python, exposed through a **FastAPI** REST API and a small **React** demo interface.
 
-> Personal project built to develop full stack engineering skills. The game engine is complete and fully tested. The REST API is functional. A basic React frontend (UI generated with AI assistance) allows solo play against bots.
+The goal of this repository is to showcase backend skills: domain modeling, game-state orchestration, API design, automated testing, and deployment. The React frontend is intentionally simple and mainly exists to make the engine playable from a browser.
+
+> Current scope: solo game against bots. The backend game engine is tested and the deployed demo is intended as a portfolio project, not as a production multiplayer platform.
 
 ---
 
-## Tech Stack
+## Demo architecture
+
+The application is deployed as a **single Render web service**:
+
+- the Vite frontend is built during the Docker build;
+- FastAPI serves the REST API;
+- FastAPI also serves the built React app from `frontend/dist`;
+- game sessions are stored in memory for the lifetime of the server process.
+
+This keeps the portfolio deployment simple: one public URL, no separate frontend hosting, and no production CORS configuration required.
+
+---
+
+## Tech stack
 
 | Layer | Technology |
-|-------|------------|
-| Game Engine | Python 3.12 |
-| Backend API | FastAPI |
-| Real-time | WebSockets *(coming soon)* |
-| Database | PostgreSQL + SQLAlchemy *(coming soon)* |
-| Frontend | React |
-| Testing | pytest |
+| --- | --- |
+| Game engine | Python 3.12 |
+| API | FastAPI |
+| Dependency manager | uv |
+| Tests | pytest |
+| Frontend demo | React + Vite |
+| Deployment | Docker on Render |
 
 ---
 
-## Architecture
+## Backend architecture
 
-The project enforces a strict separation between the **game engine** and the **communication layer**. The engine is completely agnostic to its medium: it runs identically through a REST API or inside automated tests.
+The backend is organized around a clear separation between the game engine and the API layer.
 
-```python
-# The engine receives decisions, it never asks for them
-while not self._trick.is_trick_over():
-    current_player = self._players[self._trick.current_player]
-    self._trick.receive_card(
-        current_player.index,
-        current_player.play(
-            self._trick.leading_player,
-            self._bid.trump_suit,
-            self._trick.cards_played
-        )
-    )
+```text
+backend/
+├── api/
+│   ├── main.py              # FastAPI app, CORS, health check, static frontend serving
+│   ├── routers/games.py     # HTTP endpoints and in-memory game registry
+│   └── schemas/game.py      # API request/response models
+└── game/
+    ├── game.py              # high-level orchestrator used by the API
+    ├── turn.py              # one deal/round lifecycle
+    ├── trick.py             # trick resolution
+    ├── bid.py               # bidding state
+    ├── player.py            # human/bot players and playable-card rules
+    ├── deck.py              # deck and dealing
+    └── card.py              # card, suit and rank model
 ```
 
-This design makes it trivial to plug any layer on top — a FastAPI endpoint, or a pytest test — without touching the engine at all.
+`backend/game/game.py` is the orchestration layer. It coordinates the lower-level domain objects and exposes a compact interface to the API. The game engine itself does not depend on FastAPI, which makes it testable independently from HTTP.
 
 ---
 
-## Rules Implemented
+## Implemented rules
 
-**Dealing**
-
-Cards are dealt in two passes (2+3 or 3+2, chosen randomly), matching real game conventions. The face-up card determines the proposed trump suit.
-
-**Bidding**
-
-Two bidding rounds are handled. In the first round, players may accept the proposed trump suit. In the second round, they may name a different suit. If no one bids, the round is cancelled and a new deal begins.
-
-**Gameplay**
-
-Suit-following, trump cutting, and trump climbing rules are fully implemented. A player must follow the led suit if possible, cut with a trump if unable to follow, and play a higher trump if able to when cutting. If a teammate is leading the trick, the player is not forced to cut.
-
-**Scoring**
-
-| Card | Non-trump | Trump |
-|------|-----------|-------|
-| Jack | 2 pts | 20 pts |
-| 9 | 0 pts | 14 pts |
-| Ace | 11 pts | 11 pts |
-| 10 | 10 pts | 10 pts |
-| King | 4 pts | 4 pts |
-| Queen | 3 pts | 3 pts |
-| 8 | 0 pts | 0 pts |
-| 7 | 0 pts | 0 pts |
-
-The last trick awards 10 bonus points. The team that took the contract must score more than 81 points, otherwise the opposing team scores 162. A team that wins all 8 tricks scores 252 (capot). The King and Queen of trump held by the same player awards 20 bonus points (belote-rebelote), regardless of the contract outcome.
-
-**Bot Strategy**
-
-Takes the contract if the hand scores more than 50 points at the proposed trump suit. Plays the strongest available card when the team leads the trick, the weakest otherwise.
+- 32-card Belote deck.
+- Dealing in two passes.
+- Face-up card and trump proposal.
+- Two bidding rounds.
+- Suit-following rules.
+- Trump cutting rules.
+- Trump climbing rules.
+- Last trick bonus.
+- Contract success/failure scoring.
+- Capot handling.
+- Belote-rebelote bonus.
+- Basic bot strategy.
 
 ---
 
-## Getting Started
+## API overview
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/health` | Health check used by Render |
+| `POST` | `/games/` | Create a new solo game |
+| `GET` | `/games/` | List current in-memory games |
+| `GET` | `/games/{game_id}` | Get a game summary |
+| `GET` | `/games/{game_id}/status` | Get the full current game status |
+| `GET` | `/games/{game_id}/hand` | Get the human player's hand |
+| `GET` | `/games/{game_id}/showncard` | Get the proposed trump card |
+| `POST` | `/games/{game_id}/bid` | Play a bidding decision |
+| `POST` | `/games/{game_id}/play` | Play a card |
+
+FastAPI also exposes interactive API docs at `/docs`.
+
+---
+
+## Local development
+
+### Prerequisites
+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- Node.js 22+
+- npm
+
+### Install backend dependencies
 
 ```bash
-git clone https://github.com/alexmartin10/belote.git
-cd belote
-pip install -r requirements.txt
+uv sync
+```
+
+If you want reproducible installs, generate and commit the lockfile:
+
+```bash
+uv lock
 ```
 
 ### Run the backend
 
 ```bash
-uvicorn backend.api.main:app --reload
+uv run uvicorn backend.api.main:app --reload
 ```
 
+The API will be available at:
+
+- `http://127.0.0.1:8000/health`
+- `http://127.0.0.1:8000/docs`
+
 ### Run the frontend
+
+In another terminal:
 
 ```bash
 cd frontend
@@ -98,25 +135,56 @@ npm install
 npm run dev
 ```
 
-### Run the tests
+The Vite app will run on `http://localhost:5173` and will call the API at `http://127.0.0.1:8000` in development.
+
+### Run tests
 
 ```bash
-python -m pytest tests/
+uv run pytest
 ```
 
 ---
 
-## Roadmap
+## Deployment on Render
 
-- [x] Complete game engine
-- [x] Bidding phase (2 rounds)
-- [x] Gameplay rules (suit following, cutting, climbing)
-- [x] Scoring and contract validation (capot, belote-rebelote)
-- [x] Bot player with basic strategy
-- [x] Full test suite
-- [x] REST API with FastAPI
-- [x] Basic React frontend (solo vs bots)
-- [ ] Real-time multiplayer via WebSockets
-- [ ] Authentication
-- [ ] Improved bot AI
-- [ ] Deployment (GCP or equivalent)
+This repository is prepared for deployment as a Docker web service on Render.
+
+### Files used by Render
+
+- `Dockerfile` builds the React frontend and starts FastAPI.
+- `render.yaml` defines the Render web service.
+- `/health` is configured as the health check path.
+- The server reads Render's `PORT` environment variable at runtime.
+
+### Render setup
+
+1. Push the repository to GitHub.
+2. Create a new Render **Web Service** from the GitHub repository.
+3. Choose the Docker environment, or let Render detect `render.yaml`.
+4. Keep the service as a single instance / single worker because the current game state is in memory.
+5. Use `/health` as the health check path.
+6. After deployment, test:
+   - `/health`
+   - `/docs`
+   - `/`
+
+No production `VITE_API_URL` is required for the single-service deployment because the frontend calls the API on the same origin.
+
+---
+
+## Current limitations
+
+The current implementation intentionally keeps the infrastructure simple for a portfolio demo.
+
+- Game state is stored in process memory.
+- Games disappear when the service restarts.
+- The app should run with one worker only.
+- There is no authentication.
+- There is no persistence layer.
+- Multiplayer is not implemented yet.
+- The bot strategy is basic.
+
+These limitations are acceptable for the current goal: demonstrating a tested backend game engine through a playable demo.
+
+---
+
