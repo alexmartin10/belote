@@ -88,10 +88,14 @@ class MCTSBotPlayer(MemoryPlayer):
             strengths = [card.strength(trump_suit) 
                         if (card.suit == suit_to_follow or card.suit == trump_suit) 
                         else 0 for card in cards_played]
-            return (starting_player + argmax(strengths)) % 4
+            try:
+                return (starting_player + argmax(strengths)) % 4
+            except ValueError:
+                #argmax raises ValueError if strenghts is empty
+                return starting_player
 
 
-        ts = deepcopy(trick_state)
+        ts = deepcopy(trick_state) #ts stands for trick_state. copy is made because it will be modified
 
         #adding candidate card to cards played and removing it from player's hand
         ts.cards_played.append(candidate_card)
@@ -110,7 +114,19 @@ class MCTSBotPlayer(MemoryPlayer):
             #reprendre chaque pli quand on a joué 4 cartes
             if len(ts.cards_played) == 4:
                 #fin du trick
-                pass
+                points = sum([card.points(ts.trump_suit) for card in ts.cards_played])
+                ts.points[ts.leading_player] += points
+                ts.starting_player = ts.leading_player
+                ts.cards_played = []
+                ts.tricks_remaining -= 1
+            
+            else:
+                card_chosen = self._mixed_strategy(ts.current_player, ts)
+                ts.hands[ts.current_player].remove(card_chosen)
+                ts.cards_played.append(card_chosen)
+                ts.current_player += 1
+                ts.current_player %= 4
+
 
     def _mixed_strategy(
             self,
@@ -137,7 +153,7 @@ class MCTSBotPlayer(MemoryPlayer):
                 suit=[suit for suit in Suit if suit != trick_state.trump_suit],
                 rank=Rank.ACE
             )
-            self.play_level_one(
+            return self.play_level_one(
                 player_hand,
                 player_index,
                 trick_state.leading_player,
