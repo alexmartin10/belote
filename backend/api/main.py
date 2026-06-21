@@ -1,3 +1,10 @@
+"""FastAPI application factory module for Belote Online.
+
+This module wires the HTTP API router, local-development CORS settings,
+the Render health check endpoint, and optional static serving for the built
+React frontend.
+"""
+
 import os
 from pathlib import Path
 
@@ -24,14 +31,21 @@ allowed_origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get('/health')
-def health():
-    return {'status': 'ok'}
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    """Return a minimal liveness response for Render health checks.
+
+    Returns:
+        A JSON-serializable dictionary indicating that the API process is alive.
+    """
+    return {"status": "ok"}
+
 
 app.include_router(router)
 

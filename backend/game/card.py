@@ -134,13 +134,36 @@ class Card:
         return self.suit == trump_suit
 
     def __str__(self):
+        """Return the short human-readable card label.
+
+        Returns:
+            A compact label combining rank and suit, such as ``A♠``.
+        """
         return f"{self.rank.value}{self.suit.value}"
     
     def __repr__(self):
+        """Return a developer-oriented representation of the card.
+
+        Returns:
+            A string showing the underlying Rank and Suit enum values.
+        """
         return f"Card({self.rank}, {self.suit})"
 
     def __eq__(self, other):
+        """Compare two cards by rank and suit.
+
+        Args:
+            other: Object to compare with this card.
+
+        Returns:
+            True when ``other`` exposes the same rank and suit values, False otherwise.
+        """
         return self.suit == other.suit and self.rank == other.rank
     
     def __hash__(self):
+        """Return a hash based on rank and suit.
+
+        Returns:
+            Hash value allowing Card objects to be used in sets and as dict keys.
+        """
         return hash((self.rank, self.suit))

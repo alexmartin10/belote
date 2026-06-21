@@ -160,11 +160,12 @@ npm run dev
 
 The Vite app will run on `http://localhost:5173` and will call the API at `http://127.0.0.1:8000` in development.
 
-### Run tests
+## Testing
+
+The backend includes automated tests for the core game engine and rule handling.
 
 ```bash
 uv run pytest
-```
 
 ---
 

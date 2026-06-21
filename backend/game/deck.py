@@ -74,18 +74,18 @@ class Deck:
         return self._cards[self._next_card_index]
 
     def deal_after_bid(self, taker_index: int, hands: list[list]) -> None:
-        """Completes the deal after a player has accepted the contract.
+        """Complete the deal after a player has accepted the contract.
 
         The taker receives the face-up trump card plus 2 additional cards
         (8 total). All other players receive 3 additional cards (8 total).
-        Modifies the hands list in place.
+        The provided hands are modified in place.
 
         Args:
             taker_index: The index of the player who accepted the contract.
-            hands: The list of current hands to be completed (modified in place).
+            hands: The list of current hands to complete in place.
 
-        Returns:
-            The updated list of hands, each now containing 8 cards.
+        Raises:
+            IndexError: If called before ``deal_before_bid``.
         """
         if self._next_card_index is None:
             raise IndexError("Must call deal_before_bid before dealing others cards.")

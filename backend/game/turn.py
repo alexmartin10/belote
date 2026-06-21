@@ -344,10 +344,10 @@ class Turn:
     
     @property
     def turn_aborted(self):
-        """Returns True if the turn was aborted because no player took the contract.
+        """Return whether the turn was aborted because no player took the contract.
 
         Returns:
-            True if aborted, None otherwise.
+            True if the turn was aborted, otherwise None.
         """
         return self._turn_aborted
     

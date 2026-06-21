@@ -15,7 +15,7 @@ class Bid:
     may name any other suit as trump. If no player bids in either round,
     the turn is aborted.
 
-    A single bid_index running from 0 to 7 tracks progress across both
+    A single internal counter running from 0 to 7 tracks progress across both
     rounds, avoiding explicit round-switching logic.
 
     Attributes:
@@ -60,7 +60,7 @@ class Bid:
         else:
             self.current_bidder = None
 
-    def receive_bid(self, player_index: int, takes: bool, suit: Suit = None) -> dict:
+    def receive_bid(self, player_index: int, takes: bool, suit: Suit = None) -> None:
         """Processes a bid from a player.
 
         If the player takes, the contract is assigned to them. In round 2,
@@ -71,9 +71,6 @@ class Bid:
             player_index: Index of the player submitting the bid.
             takes: True if the player accepts the contract, False to pass.
             suit: The chosen trump suit (required in round 2 when taking).
-
-        Returns:
-            None.
 
         Raises:
             ValueError: If it is not the player's turn to bid.
