@@ -8,6 +8,16 @@ The goal of this repository is to showcase backend skills: domain modeling, game
 
 ---
 
+## Live demo
+
+The application is deployed on Render and is available here:
+
+[Open the live demo](https://belote-z2sm.onrender.com/)
+
+> The demo is hosted on Render's free plan. The first request may take around one minute if the service has been inactive for a while.
+
+---
+
 ## Demo architecture
 
 The application is deployed as a **single Render web service**:
@@ -25,7 +35,7 @@ This keeps the portfolio deployment simple: one public URL, no separate frontend
 
 | Layer | Technology |
 | --- | --- |
-| Game engine | Python 3.12 |
+| Game engine | Python |
 | API | FastAPI |
 | Dependency manager | uv |
 | Tests | pytest |
@@ -90,6 +100,19 @@ backend/
 | `POST` | `/games/{game_id}/play` | Play a card |
 
 FastAPI also exposes interactive API docs at `/docs`.
+
+---
+
+## What this project demonstrates
+
+This project focuses on backend engineering rather than frontend design. It demonstrates:
+
+- modeling a real-world rules-based domain;
+- separating business logic from the HTTP API layer;
+- orchestrating game state through a dedicated `Game` service;
+- exposing the engine through a REST API;
+- validating game rules with automated tests;
+- packaging and deploying a full-stack demo with Docker.
 
 ---
 
